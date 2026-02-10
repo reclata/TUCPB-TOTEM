@@ -10,6 +10,7 @@ import 'package:terreiro_queue_system/src/shared/providers/global_providers.dart
 import 'package:terreiro_queue_system/src/features/queue/data/firestore_queue_repository.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'usuarios_section.dart';
+import 'senhas_screen.dart';
 
 const List<String> LINHA_OPTIONS = [
   'Caboclo',
@@ -116,7 +117,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
                 _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
                 _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
-                _buildMenuItem(Icons.people_outline, 'Usuários', 3),
+                _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
+                _buildMenuItem(Icons.people_outline, 'Usuários', 4),
                 
                 const Spacer(),
                 
@@ -269,6 +271,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       case 2:
         return 'Calendário de Giras';
       case 3:
+        return 'Senhas';
+      case 4:
         return 'Usuários';
       default:
         return 'T.U.C.P.B. Token';
@@ -284,6 +288,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       case 2:
         return _AdminDashboard();
       case 3:
+        return const SenhasScreen();
+      case 4:
         return const UsuariosScreen();
       default:
         return const Center(child: Text('Em construção'));

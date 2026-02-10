@@ -1,1 +1,36 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"tucpb---token","appId":"1:29392338910:android:dfdb36e1dcfedd252ba74f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"tucpb---token","configurations":{"android":"1:29392338910:android:dfdb36e1dcfedd252ba74f","web":"1:29392338910:web:f109ef5070c1c5d22ba74f"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tucpb---token",
+          "appId": "1:29392338910:android:dfdb36e1dcfedd252ba74f",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tucpb---token",
+          "configurations": {
+            "android": "1:29392338910:android:dfdb36e1dcfedd252ba74f",
+            "web": "1:29392338910:web:f109ef5070c1c5d22ba74f"
+          }
+        }
+      }
+    }
+  }
+}
