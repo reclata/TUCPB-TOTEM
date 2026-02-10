@@ -47,6 +47,14 @@ class AdminRepository {
     await _firestore.collection('giras').doc(giraId).update({'presencas': presencas});
   }
 
+  Future<void> updateGira(Gira gira) async {
+    await _firestore.collection('giras').doc(gira.id).update(gira.toJson());
+  }
+
+  Future<void> deleteGira(String giraId) async {
+    await _firestore.collection('giras').doc(giraId).delete();
+  }
+
   Future<void> closeGira(String giraId) async {
     await _firestore.collection('giras').doc(giraId).update({'status': 'encerrada'});
   }

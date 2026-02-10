@@ -1046,147 +1046,345 @@ class _CadastrosScreen extends StatelessWidget {
 // -----------------------------------------------------------------------------
 // TAB: CALENDÁRIO (Giras)
 // -----------------------------------------------------------------------------
-class _AdminDashboard extends ConsumerWidget {
+class _AdminDashboard extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
+  late DateTime _currentMonth;
+  
+  @override
+  void initState() {
+    super.initState();
+    _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     const terreiroId = 'demo-terreiro';
     final girasListAsync = ref.watch(giraListProvider(terreiroId));
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Padding(
-      padding: const EdgeInsets.all(32.0),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text("ABRIR NOVA GIRA"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.brown,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          // Header do calendário - Navegação de meses
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.brown[800],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+                    });
+                  },
                 ),
-                onPressed: () {
-                  _showCreateGiraDialog(context, ref, terreiroId);
-                },
-              ),
-            ],
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Text(
+                        _monthName(_currentMonth.month),
+                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      Text(
+                        '${_currentMonth.year}',
+                        style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                  onPressed: () {
+                    setState(() {
+                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // Dias da semana
+          Row(
+            children: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) {
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    day,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.brown[600],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+
+          // Grid do calendário
           Expanded(
             child: girasListAsync.when(
-              data: (giras) {
-                if (giras.isEmpty) {
-                  return const Center(child: Text("Nenhuma Gira registrada."));
-                }
-                return ListView.builder(
-                  itemCount: giras.length,
-                  itemBuilder: (context, index) {
-                    final gira = giras[index];
-                    final isOpen = gira.status == 'aberta';
-                    return Card(
-                      color: isOpen ? Colors.green[50] : Colors.white,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        leading: Icon(Icons.event_note, color: isOpen ? Colors.green : Colors.grey),
-                        title: Text("${gira.tema} - ${DateFormat('dd/MM/yyyy').format(gira.data)}"),
-                        subtitle: Text("Status: ${gira.status}"),
-                        trailing: isOpen
-                            ? IconButton(
-                                icon: const Icon(Icons.stop_circle_outlined, color: Colors.red),
-                                onPressed: () {
-                                  ref.read(adminRepositoryProvider).closeGira(gira.id);
-                                },
-                                tooltip: 'Encerrar Gira',
-                              )
-                            : null,
-                      ),
-                    );
-                  },
-                );
-              },
+              data: (giras) => _buildCalendarGrid(giras, terreiroId),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Erro: $err')),
             ),
           ),
+
+          // Legenda
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegend(Colors.green, 'Aberta'),
+              const SizedBox(width: 20),
+              _buildLegend(Colors.blue, 'Agendada'),
+              const SizedBox(width: 20),
+              _buildLegend(Colors.grey, 'Encerrada'),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatChip(IconData icon, String label, Color bgColor, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: textColor),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
-      ),
+  Widget _buildLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12, height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600])),
+      ],
     );
   }
 
-  void _showCreateGiraDialog(BuildContext context, WidgetRef ref, String terreiroId) {
+  Widget _buildCalendarGrid(List<Gira> giras, String terreiroId) {
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final firstWeekday = firstDayOfMonth.weekday % 7; // 0 = Domingo
+    final daysInMonth = lastDayOfMonth.day;
+    final totalCells = firstWeekday + daysInMonth;
+    final rows = (totalCells / 7).ceil();
+
+    // Mapear giras por data (dia)
+    final girasByDate = <String, List<Gira>>{};
+    for (var gira in giras) {
+      final key = '${gira.data.year}-${gira.data.month}-${gira.data.day}';
+      girasByDate.putIfAbsent(key, () => []).add(gira);
+    }
+
+    final today = DateTime.now();
+
+    return Column(
+      children: List.generate(rows, (row) {
+        return Expanded(
+          child: Row(
+            children: List.generate(7, (col) {
+              final cellIndex = row * 7 + col;
+              final dayNumber = cellIndex - firstWeekday + 1;
+              
+              if (dayNumber < 1 || dayNumber > daysInMonth) {
+                // Célula vazia
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              }
+
+              final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
+              final dateKey = '${date.year}-${date.month}-${date.day}';
+              final dayGiras = girasByDate[dateKey] ?? [];
+              final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+              final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (dayGiras.isEmpty) {
+                      _showCreateGiraDialog(date, terreiroId);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isToday ? Colors.brown[50] : Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isToday ? Colors.brown : Colors.grey[200]!,
+                        width: isToday ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Número do dia
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6, top: 4),
+                          child: Text(
+                            '$dayNumber',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                              color: isPast && dayGiras.isEmpty ? Colors.grey[400] : Colors.brown[800],
+                            ),
+                          ),
+                        ),
+                        // Indicadores de gira
+                        if (dayGiras.isNotEmpty)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+                              child: Column(
+                                children: dayGiras.take(3).map((gira) {
+                                  return Flexible(
+                                    child: GestureDetector(
+                                      onTap: () => _showEditGiraDialog(gira, terreiroId),
+                                      child: Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(bottom: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _statusColor(gira.status),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          gira.linha,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          )
+                        else
+                          const Spacer(),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      }),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'aberta': return Colors.green;
+      case 'agendada': return Colors.blue;
+      case 'encerrada': return Colors.grey;
+      default: return Colors.brown;
+    }
+  }
+
+  String _monthName(int month) {
+    const months = [
+      '', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return months[month];
+  }
+
+  void _showCreateGiraDialog(DateTime date, String terreiroId) {
     final temaCtrl = TextEditingController();
     String? selectedLinha;
     
-    // Buscar linhas dos médiuns cadastrados
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
     final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
     final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
     
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Nova Gira"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
             children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: "Linha Principal",
-                  border: OutlineInputBorder(),
-                ),
-                value: selectedLinha,
-                items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                onChanged: (val) => setDialogState(() => selectedLinha = val),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: temaCtrl,
-                decoration: const InputDecoration(
-                  labelText: "Tema da Gira",
-                  hintText: "Ex: Gira de Encerramento",
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              Icon(Icons.calendar_today, color: Colors.brown[700]),
+              const SizedBox(width: 10),
+              Text('Nova Gira - ${DateFormat('dd/MM/yyyy').format(date)}',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Linha Principal",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.auto_awesome),
+                  ),
+                  value: selectedLinha,
+                  items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                  onChanged: (val) => setDialogState(() => selectedLinha = val),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: temaCtrl,
+                  decoration: InputDecoration(
+                    labelText: "Tema da Gira (opcional)",
+                    hintText: "Ex: Gira de Encerramento",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.subject),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text("CANCELAR"),
             ),
-            ElevatedButton(
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.brown,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (selectedLinha == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Selecione a linha da gira')),
                   );
                   return;
@@ -1194,19 +1392,188 @@ class _AdminDashboard extends ConsumerWidget {
                 final newGira = Gira(
                   id: const Uuid().v4(),
                   terreiroId: terreiroId,
-                  data: DateTime.now(),
-                  tema: temaCtrl.text.isEmpty ? selectedLinha! : temaCtrl.text,
+                  data: date,
+                  tema: temaCtrl.text.isEmpty ? 'Gira de ${selectedLinha!}' : temaCtrl.text,
                   linha: selectedLinha!,
-                  status: 'aberta',
+                  status: 'agendada',
                 );
-                ref.read(adminRepositoryProvider).createGira(newGira);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gira criada com sucesso!'), backgroundColor: Colors.green),
+                try {
+                  await ref.read(adminRepositoryProvider).createGira(newGira);
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Gira criada com sucesso!'), backgroundColor: Colors.green),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              label: const Text("CRIAR GIRA"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditGiraDialog(Gira gira, String terreiroId) {
+    final temaCtrl = TextEditingController(text: gira.tema);
+    String selectedLinha = gira.linha;
+    String selectedStatus = gira.status;
+    
+    final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
+    final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
+    final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
+    // Garantir que a linha atual está na lista
+    if (!dropdownItems.contains(selectedLinha)) {
+      dropdownItems.add(selectedLinha);
+    }
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.edit_calendar, color: Colors.brown[700]),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Editar Gira - ${DateFormat('dd/MM/yyyy').format(gira.data)}',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Status
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Status",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.flag),
+                  ),
+                  value: selectedStatus,
+                  items: ['agendada', 'aberta', 'encerrada'].map((s) => DropdownMenuItem(
+                    value: s,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10, height: 10,
+                          decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(s[0].toUpperCase() + s.substring(1)),
+                      ],
+                    ),
+                  )).toList(),
+                  onChanged: (val) => setDialogState(() => selectedStatus = val!),
+                ),
+                const SizedBox(height: 16),
+                // Linha
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Linha Principal",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.auto_awesome),
+                  ),
+                  value: selectedLinha,
+                  items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                  onChanged: (val) => setDialogState(() => selectedLinha = val!),
+                ),
+                const SizedBox(height: 16),
+                // Tema
+                TextField(
+                  controller: temaCtrl,
+                  decoration: InputDecoration(
+                    labelText: "Tema da Gira",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.subject),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            // Botão excluir
+            TextButton.icon(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+              label: const Text("EXCLUIR", style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                showDialog(
+                  context: ctx,
+                  builder: (confirmCtx) => AlertDialog(
+                    title: const Text('Confirmar exclusão'),
+                    content: Text('Deseja excluir a gira "${gira.tema}"?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(confirmCtx), child: const Text('CANCELAR')),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                        onPressed: () async {
+                          await ref.read(adminRepositoryProvider).deleteGira(gira.id);
+                          if (confirmCtx.mounted) Navigator.pop(confirmCtx);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Gira excluída'), backgroundColor: Colors.orange),
+                            );
+                          }
+                        },
+                        child: const Text('EXCLUIR'),
+                      ),
+                    ],
+                  ),
                 );
               },
-              child: const Text("CRIAR GIRA"),
-            )
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("CANCELAR"),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.brown,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final updatedGira = Gira(
+                  id: gira.id,
+                  terreiroId: gira.terreiroId,
+                  data: gira.data,
+                  tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
+                  linha: selectedLinha,
+                  status: selectedStatus,
+                  presencas: gira.presencas,
+                );
+                try {
+                  await ref.read(adminRepositoryProvider).updateGira(updatedGira);
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Gira atualizada!'), backgroundColor: Colors.green),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              label: const Text("SALVAR"),
+            ),
           ],
         ),
       ),
