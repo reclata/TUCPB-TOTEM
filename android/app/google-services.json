@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "29392338910",
+    "project_id": "tucpb---token",
+    "storage_bucket": "tucpb---token.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29392338910:android:dfdb36e1dcfedd252ba74f",
+        "android_client_info": {
+          "package_name": "com.terreiro.terreiro_queue_system"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMbU--sA-LGPPLJTJCiReHOgoa4vfcB68"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
