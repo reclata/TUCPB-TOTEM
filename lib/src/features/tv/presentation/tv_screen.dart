@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/models/models.dart';
 
 // Specific provider for TV to get calls
 final tvCallsProvider = StreamProvider.family<List<Ticket>, String>((ref, terreiroId) {
@@ -105,9 +105,11 @@ class TvScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Center(child: Image.asset('assets/images/logo.jpg', height: 120)),
+                      const SizedBox(height: 40),
                       Text("ÚLTIMAS CHAMADAS", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white54)),
                       const SizedBox(height: 20),
-                      ...history.map((t) => _HistoryItem(ticket: t)).toList(),
+                      ...history.map((t) => _HistoryItem(ticket: t)),
                     ],
                   ),
                 ),

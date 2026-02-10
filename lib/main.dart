@@ -1,6 +1,8 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'src/features/auth/presentation/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,14 +13,21 @@ import 'src/features/kiosk/presentation/kiosk_screen.dart';
 import 'src/features/admin/presentation/admin_screen.dart';
 import 'src/features/tv/presentation/tv_screen.dart';
 import 'src/features/queue/presentation/queue_web_screen.dart';
-import 'src/features/auth/presentation/login_screen.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    // If user generated options, use DefaultFirebaseOptions.currentPlatform
-    // Otherwise rely on manual config or implicit config (web)
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Habilitar persistência offline para que os dados fiquem no navegador
+    // mesmo após fechar a aba ou reiniciar o aplicativo.
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
     debugPrint("Firebase init failed: $e");
   }
@@ -95,14 +104,29 @@ class TerreiroApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Terreiro Queue System',
+      title: 'T.U.C.P.B. Token',
       theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF673AB7), // Mystical purple
-          brightness: Brightness.dark,
+          seedColor: Colors.brown,
+          primary: Colors.brown,
+          secondary: Colors.amber, 
+          brightness: Brightness.light,
         ),
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.brown,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: Colors.brown[50],
+          selectedIconTheme: const IconThemeData(color: Colors.brown),
+          unselectedIconTheme: const IconThemeData(color: Colors.black54),
+          labelType: NavigationRailLabelType.none,
+        ),
       ),
       routerConfig: _router,
     );

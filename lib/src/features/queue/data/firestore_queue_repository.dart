@@ -1,7 +1,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/models/models.dart';
 
 final queueRepositoryProvider = Provider((ref) => FirestoreQueueRepository(FirebaseFirestore.instance));
 
@@ -60,7 +60,20 @@ class FirestoreQueueRepository {
          transaction.set(queueRef, {'order': nextOrder});
        }
 
-       final code = '${medium.iniciais}${nextSeq.toString().padLeft(4, '0')}';
+        // Generate initials from medium name (3 letters)
+        String initials;
+        final parts = medium.nome.split(' ').where((p) => p.isNotEmpty).toList();
+        if (parts.length >= 3) {
+          initials = (parts[0][0] + parts[1][0] + parts[2][0]).toUpperCase();
+        } else if (parts.length == 2) {
+          initials = (parts[0].substring(0, parts[0].length >= 2 ? 2 : 1) + parts[1][0]).toUpperCase();
+        } else if (parts.isNotEmpty) {
+          initials = parts[0].substring(0, parts[0].length >= 3 ? 3 : parts[0].length).toUpperCase();
+        } else {
+          initials = 'MED';
+        }
+        
+        final code = '$initials${nextSeq.toString().padLeft(4, '0')}';
        
        final newTicketRef = _firestore.collection('tickets').doc();
        final ticket = Ticket(
