@@ -1,0 +1,59 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "giras",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "terreiroId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "data",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "tickets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "giraId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "ordemFila",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "tickets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "giraId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "entidadeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "ordemFila",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

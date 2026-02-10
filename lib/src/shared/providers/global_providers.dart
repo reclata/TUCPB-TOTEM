@@ -85,3 +85,20 @@ final currentUserProvider = Provider<Usuario?>((ref) {
     ativo: true,
   );
 });
+
+// Provider que extrai linhas únicas dos médiuns cadastrados
+final linhasFromMediumsProvider = Provider.family<AsyncValue<List<String>>, String>((ref, terreiroId) {
+  final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+  return mediumsAsync.whenData((mediums) {
+    final linhas = <String>{};
+    for (var m in mediums) {
+      for (var e in m.entidades) {
+        if (e.linha.isNotEmpty) {
+          linhas.add(e.linha);
+        }
+      }
+    }
+    final sorted = linhas.toList()..sort();
+    return sorted;
+  });
+});

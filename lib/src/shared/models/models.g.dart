@@ -83,7 +83,7 @@ Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
   'terreiroId': instance.terreiroId,
   'nome': instance.nome,
   'ativo': instance.ativo,
-  'entidades': instance.entidades,
+  'entidades': instance.entidades.map((e) => e.toJson()).toList(),
   'girasParticipadas': instance.girasParticipadas,
   'atendimentosRealizados': instance.atendimentosRealizados,
   'faltas': instance.faltas,

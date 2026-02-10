@@ -180,18 +180,42 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 }
 
                 if (_selectedLine == null) {
-                  // Filtrar as linhas permitidas para esta Gira
-                  final allowedLines = _giraLineGroups[gira.linha] ?? [gira.linha];
+                  // Usar a linha cadastrada na Gira para filtrar
+                  final giraLinha = gira.linha;
                   
-                  final lines = mediums
+                  // Buscar todas as linhas disponíveis dos médiuns presentes
+                  final allLines = mediums
                     .map((m) => m.entity.linha)
-                    .where((linha) => allowedLines.contains(linha))
                     .toSet()
                     .toList();
-                  lines.sort();
+                  allLines.sort();
+                  
+                  // Filtrar: mostrar apenas a linha da Gira (se existir médiuns com essa linha)
+                  final lines = allLines.where((linha) => linha == giraLinha).toList();
+                  
+                  // Se a linha da gira tem médiuns, pode ir direto para entidades
+                  if (lines.length == 1) {
+                    // Apenas uma linha disponível, pular seleção de linha
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _selectedLine == null) {
+                        setState(() => _selectedLine = lines.first);
+                      }
+                    });
+                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
+                  }
                   
                   if (lines.isEmpty) {
-                    return Center(child: Text("Nenhuma entidade da linha ${gira.linha} disponível.", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white38)));
+                    // Nenhum médium da linha da gira está presente
+                    // Mostrar todas as linhas disponíveis como fallback
+                    if (allLines.isEmpty) {
+                      return Center(child: Text("Nenhuma entidade disponível para a linha '${gira.linha}'.", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white38)));
+                    }
+                    return Wrap(
+                      spacing: 30,
+                      runSpacing: 30,
+                      alignment: WrapAlignment.center,
+                      children: allLines.map((line) => _buildLineButton(line)).toList(),
+                    );
                   }
 
                   return Wrap(

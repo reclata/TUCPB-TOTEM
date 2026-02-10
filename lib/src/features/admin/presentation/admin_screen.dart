@@ -767,6 +767,10 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
     final temaCtrl = TextEditingController();
     String? selectedLinha;
     
+    // Buscar linhas dos médiuns cadastrados
+    final linhasAsync = ref.read(linhasFromMediumsProvider('demo-terreiro'));
+    final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
+    
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -781,7 +785,7 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
                   border: OutlineInputBorder(),
                 ),
                 value: selectedLinha,
-                items: LINHA_OPTIONS.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                items: (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions).map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
                 onChanged: (val) => setDialogState(() => selectedLinha = val),
               ),
               const SizedBox(height: 16),
@@ -1135,36 +1139,76 @@ class _AdminDashboard extends ConsumerWidget {
 
   void _showCreateGiraDialog(BuildContext context, WidgetRef ref, String terreiroId) {
     final temaCtrl = TextEditingController();
+    String? selectedLinha;
+    
+    // Buscar linhas dos médiuns cadastrados
+    final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
+    final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
+    final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Nova Gira"),
-        content: TextField(
-          controller: temaCtrl,
-          decoration: const InputDecoration(labelText: "Tema da Gira", border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CANCELAR"),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text("Nova Gira"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: "Linha Principal",
+                  border: OutlineInputBorder(),
+                ),
+                value: selectedLinha,
+                items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                onChanged: (val) => setDialogState(() => selectedLinha = val),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: temaCtrl,
+                decoration: const InputDecoration(
+                  labelText: "Tema da Gira",
+                  hintText: "Ex: Gira de Encerramento",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              if (temaCtrl.text.isEmpty) return;
-              final newGira = Gira(
-                id: const Uuid().v4(),
-                terreiroId: terreiroId,
-                data: DateTime.now(),
-                tema: temaCtrl.text,
-                linha: temaCtrl.text, // Temporary: using same value as tema
-                status: 'aberta',
-              );
-              ref.read(adminRepositoryProvider).createGira(newGira);
-              Navigator.pop(context);
-            },
-            child: const Text("CRIAR"),
-          )
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("CANCELAR"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.brown,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                if (selectedLinha == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Selecione a linha da gira')),
+                  );
+                  return;
+                }
+                final newGira = Gira(
+                  id: const Uuid().v4(),
+                  terreiroId: terreiroId,
+                  data: DateTime.now(),
+                  tema: temaCtrl.text.isEmpty ? selectedLinha! : temaCtrl.text,
+                  linha: selectedLinha!,
+                  status: 'aberta',
+                );
+                ref.read(adminRepositoryProvider).createGira(newGira);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Gira criada com sucesso!'), backgroundColor: Colors.green),
+                );
+              },
+              child: const Text("CRIAR GIRA"),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -1601,7 +1645,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                 backgroundColor: Colors.brown,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (nameCtrl.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Digite o nome do médium')),
@@ -1615,17 +1659,25 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                   ativo: true,
                   entidades: selectedEntities,
                 );
-                ref.read(adminRepositoryProvider).addMedium(med);
-                
-                // Reset filters so the user can see the new medium
-                setState(() {
-                  _filterLinha = null;
-                  _searchQuery = '';
-                  _filterEntidade = null;
-                });
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Médium adicionado com sucesso!')));
+                try {
+                  await ref.read(adminRepositoryProvider).addMedium(med);
+                  
+                  // Reset filters so the user can see the new medium
+                  setState(() {
+                    _filterLinha = null;
+                    _searchQuery = '';
+                    _filterEntidade = null;
+                  });
+                  
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Médium adicionado com sucesso!'), backgroundColor: Colors.green));
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red));
+                  }
+                }
               },
               child: const Text('SALVAR'),
             ),
