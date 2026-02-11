@@ -436,35 +436,59 @@ class _DashboardScreen extends ConsumerWidget {
 
               return Column(
                 children: [
-                   Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Médiuns na Gira',
-                          presentMediumsCount.toString(),
-                          Icons.people,
-                          Colors.brown,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Assistência do Dia',
-                          assistanceCount.toString(),
-                          Icons.confirmation_number,
-                          Colors.amber[800]!,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Senhas Chamadas',
-                          calledCount.toString(),
-                          Icons.campaign,
-                          Colors.green,
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
+                      int crossAxisCount = 4;
+                      if (width < 600) crossAxisCount = 1;
+                      else if (width < 900) crossAxisCount = 2;
+                      
+                      final double gap = 16.0;
+                      final double cardWidth = (width - (gap * (crossAxisCount - 1))) / crossAxisCount;
+
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: [
+                          SizedBox(
+                            width: cardWidth,
+                            child: _buildStatCard(
+                              'Médiuns na Gira',
+                              presentMediumsCount.toString(),
+                              Icons.people,
+                              Colors.brown,
+                            ),
+                          ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: _buildStatCard(
+                              'Assistência do Dia',
+                              assistanceCount.toString(),
+                              Icons.confirmation_number,
+                              Colors.amber[800]!,
+                            ),
+                          ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: _buildStatCard(
+                              'Senhas Chamadas',
+                              calledCount.toString(),
+                              Icons.campaign,
+                              Colors.green,
+                            ),
+                          ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: _buildStatCard(
+                              'Transferências do Dia',
+                              todayTickets.where((t) => t.isRedistributed).length.toString(),
+                              Icons.swap_horiz,
+                              Colors.purple,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   
                   const SizedBox(height: 32),
@@ -2807,6 +2831,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
 
   void _addMediumDialog(BuildContext context, WidgetRef ref, String terreiroId) {
     final nameCtrl = TextEditingController();
+    final maxFichasCtrl = TextEditingController(text: '10');
     final allEntities = ref.read(entityListProvider(terreiroId)).value ?? [];
     final List<MediumEntidade> selectedEntities = [];
 
@@ -2829,9 +2854,20 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                       border: OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: maxFichasCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Max. Fichas',
+                      border: OutlineInputBorder(),
+                      helperText: 'Padrão: 10'
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   const Divider(),
                   const SizedBox(height: 12),
+                  // ... rest of entities list ...
                   Text(
                     'Entidades Incorporadas',
                     style: TextStyle(
@@ -2940,17 +2976,21 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                   );
                   return;
                 }
+                
+                final maxFichas = int.tryParse(maxFichasCtrl.text) ?? 10;
+
                 final med = Medium(
                   id: const Uuid().v4(),
                   terreiroId: terreiroId,
                   nome: nameCtrl.text,
                   ativo: true,
                   entidades: selectedEntities,
+                  maxFichas: maxFichas,
                 );
                 try {
                   await ref.read(adminRepositoryProvider).addMedium(med);
                   
-                  // Reset filters so the user can see the new medium
+                  // Reset filters
                   setState(() {
                     _filterLinha = null;
                     _searchQuery = '';
@@ -2976,6 +3016,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
   }
   void _editMediumDialog(BuildContext context, WidgetRef ref, String terreiroId, Medium medium) {
     final nameCtrl = TextEditingController(text: medium.nome);
+    final maxFichasCtrl = TextEditingController(text: medium.maxFichas.toString());
     final allEntities = ref.read(entityListProvider(terreiroId)).value ?? [];
     final List<MediumEntidade> selectedEntities = List.from(medium.entidades);
 
@@ -2996,6 +3037,16 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                     decoration: const InputDecoration(
                       labelText: 'Nome Completo',
                       border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: maxFichasCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Max. Fichas',
+                      border: OutlineInputBorder(),
+                      helperText: 'Padrão: 10'
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -3104,12 +3155,19 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
               ),
               onPressed: () {
                 if (nameCtrl.text.isEmpty) return;
+                
+                final maxFichas = int.tryParse(maxFichasCtrl.text) ?? 10;
+                
                 final updatedMed = Medium(
                   id: medium.id,
-                  terreiroId: terreiroId,
+                  terreiroId: medium.terreiroId,
                   nome: nameCtrl.text,
                   ativo: medium.ativo,
                   entidades: selectedEntities,
+                  maxFichas: maxFichas,
+                  girasParticipadas: medium.girasParticipadas,
+                  atendimentosRealizados: medium.atendimentosRealizados,
+                  faltas: medium.faltas,
                 );
                 ref.read(adminRepositoryProvider).updateMedium(updatedMed);
                 Navigator.pop(context);
@@ -3504,11 +3562,36 @@ class _ConfiguracoesScreenState extends ConsumerState<_ConfiguracoesScreen> {
   String? _selectedUsuarioId;
 
   final List<Map<String, String>> _availableFeatures = [
-    {'id': 'dashboard', 'label': 'Dashboard', 'icon': 'dashboard'},
-    {'id': 'cadastros', 'label': 'Cadastros', 'icon': 'folder_shared'},
-    {'id': 'calendario', 'label': 'Calendário', 'icon': 'calendar_month'},
-    {'id': 'senhas', 'label': 'Senhas', 'icon': 'confirmation_number'},
-    {'id': 'usuarios', 'label': 'Usuários', 'icon': 'people'},
+    {
+      'id': 'dashboard', 
+      'label': 'Dashboard', 
+      'icon': 'dashboard',
+      'description': 'Visão geral em tempo real (médiuns na casa, assistência), gráficos e métricas do porteiro. Ideal para monitoramento sem edição de dados.'
+    },
+    {
+      'id': 'cadastros', 
+      'label': 'Cadastros', 
+      'icon': 'folder_shared',
+      'description': 'Gestão completa do banco de dados: cadastrar/editar Médiuns e Entidades. Acesso sensível, recomendado apenas para Secretaria.'
+    },
+    {
+      'id': 'calendario', 
+      'label': 'Calendário', 
+      'icon': 'calendar_month',
+      'description': 'Controle da agenda: agendar giras, iniciar/encerrar sessões e realizar a chamada de presença dos médiuns.'
+    },
+    {
+      'id': 'senhas', 
+      'label': 'Senhas', 
+      'icon': 'confirmation_number',
+      'description': 'Operação da fila: chamar senhas (painel TV), marcar atendimentos e redistribuir senhas. Uso essencial para Cambonos.'
+    },
+    {
+      'id': 'usuarios', 
+      'label': 'Usuários', 
+      'icon': 'people',
+      'description': 'Administração de acessos: criar logins para operadores e redefinir senhas. Apenas Managers devem ter este acesso.'
+    },
   ];
 
   @override
@@ -3596,7 +3679,9 @@ class _ConfiguracoesScreenState extends ConsumerState<_ConfiguracoesScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   child: SwitchListTile(
                                     title: Text(feature['label']!, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                                    subtitle: Text(feature['description']!, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600])),
                                     secondary: Icon(_getIconData(feature['icon']!), color: Colors.brown[700]),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                     value: hasAccess,
                                     activeColor: Colors.brown,
                                     onChanged: (bool value) async {

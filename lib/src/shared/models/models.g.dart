@@ -92,6 +92,7 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
   atendimentosRealizados:
       (json['atendimentosRealizados'] as num?)?.toInt() ?? 0,
   faltas: (json['faltas'] as num?)?.toInt() ?? 0,
+  maxFichas: (json['maxFichas'] as num?)?.toInt() ?? 10,
 );
 
 Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
@@ -103,6 +104,7 @@ Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
   'girasParticipadas': instance.girasParticipadas,
   'atendimentosRealizados': instance.atendimentosRealizados,
   'faltas': instance.faltas,
+  'maxFichas': instance.maxFichas,
 };
 
 Ticket _$TicketFromJson(Map<String, dynamic> json) => Ticket(
@@ -128,6 +130,7 @@ Ticket _$TicketFromJson(Map<String, dynamic> json) => Ticket(
     const TimestampConverter().fromJson,
   ),
   chamadaCount: (json['chamadaCount'] as num?)?.toInt() ?? 0,
+  isRedistributed: json['isRedistributed'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$TicketToJson(Ticket instance) => <String, dynamic>{
@@ -153,6 +156,7 @@ Map<String, dynamic> _$TicketToJson(Ticket instance) => <String, dynamic>{
     const TimestampConverter().toJson,
   ),
   'chamadaCount': instance.chamadaCount,
+  'isRedistributed': instance.isRedistributed,
 };
 
 Value? _$JsonConverterFromJson<Json, Value>(

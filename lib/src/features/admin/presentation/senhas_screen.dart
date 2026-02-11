@@ -30,7 +30,7 @@ class SenhasScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           Container(
@@ -41,6 +41,7 @@ class SenhasScreen extends StatelessWidget {
               indicatorColor: Colors.brown[700],
               indicatorWeight: 3,
               tabs: const [
+                Tab(icon: Icon(Icons.grid_view), text: 'Visão Geral'),
                 Tab(icon: Icon(Icons.campaign), text: 'Chamar Senha'),
                 Tab(icon: Icon(Icons.swap_horiz), text: 'Redistribuir Senhas'),
               ],
@@ -49,6 +50,7 @@ class SenhasScreen extends StatelessWidget {
           const Expanded(
             child: TabBarView(
               children: [
+                _VisaoGeralTab(), // Nova aba
                 _ChamarSenhaTab(),
                 _RedistribuirSenhasTab(),
               ],
@@ -61,8 +63,149 @@ class SenhasScreen extends StatelessWidget {
 }
 
 // =============================================================================
-// ABA 1: CHAMAR SENHA
+// ABA 1: VISÃO GERAL (NOVA)
 // =============================================================================
+class _VisaoGeralTab extends ConsumerWidget {
+  const _VisaoGeralTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const terreiroId = 'demo-terreiro';
+    final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
+    final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+
+    return activeGiraAsync.when(
+      data: (gira) {
+        if (gira == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_busy, size: 80, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text('Nenhuma gira aberta no momento', style: TextStyle(
+                    fontSize: 18, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+              ],
+            ),
+          );
+        }
+
+        return mediumsAsync.when(
+          data: (mediums) {
+            final presentMediums = mediums.where((m) => m.ativo && (gira.presencas[m.id] ?? false)).toList();
+            
+            if (presentMediums.isEmpty) {
+              return const Center(child: Text("Nenhum médium presente."));
+            }
+
+            final allTicketsAsync = ref.watch(allTicketsForGiraProvider(gira.id));
+
+            return allTicketsAsync.when(
+              data: (allTickets) {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: presentMediums.length,
+                  itemBuilder: (context, index) {
+                    final medium = presentMediums[index];
+                    // Filtrar tickets deste médium
+                    final mediumTickets = allTickets.where((t) => t.mediumId == medium.id).toList();
+                    final maxFichas = medium.maxFichas > 0 ? medium.maxFichas : 10;
+                    
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Colors.brown[100],
+                                  child: Text(medium.nome.isNotEmpty ? medium.nome[0].toUpperCase() : '?',
+                                    style: TextStyle(color: Colors.brown[800], fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(medium.nome, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                      Text(medium.entidades.isNotEmpty ? medium.entidades.first.entidadeNome : 'Sem entidade',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: List.generate(maxFichas, (i) {
+                                final fichaNum = i + 1;
+                                // Find ticket for this position (sequencial or ordemFila? Used sequencial logic based on description)
+                                // Actually better to use sequencial from ticket if we assume seq is 1..N
+                                final ticket = mediumTickets.where((t) => t.sequencial == fichaNum).firstOrNull;
+                                
+                                Color bgColor = Colors.grey[100]!;
+                                Color textColor = Colors.grey[400]!;
+                                Border? border = Border.all(color: Colors.grey[300]!);
+                                IconData? icon;
+
+                                if (ticket != null) {
+                                  border = null;
+                                  if (ticket.status == 'chamada') {
+                                    bgColor = Colors.green;
+                                    textColor = Colors.white;
+                                    icon = Icons.campaign;
+                                  } else if (ticket.status == 'emitida') {
+                                    bgColor = Colors.amber[100]!;
+                                    textColor = Colors.amber[900]!;
+                                    border = Border.all(color: Colors.amber);
+                                  } else if (ticket.status == 'atendida') {
+                                    bgColor = Colors.grey[400]!;
+                                    textColor = Colors.white;
+                                    icon = Icons.check;
+                                  }
+                                }
+
+                                return Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: bgColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: border,
+                                  ),
+                                  child: Center(
+                                    child: icon != null 
+                                      ? Icon(icon, size: 20, color: textColor)
+                                      : Text('$fichaNum', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Text("Erro ao carregar tickets: $e"),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text("Erro: $e")),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => Center(child: Text("Erro: $e")),
+    );
+  }
+}
 class _ChamarSenhaTab extends ConsumerStatefulWidget {
   const _ChamarSenhaTab();
 
@@ -78,6 +221,19 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
     const terreiroId = 'demo-terreiro';
     final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
     final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+    final allTicketsAsync = activeGiraAsync.value != null
+        ? ref.watch(allTicketsForGiraProvider(activeGiraAsync.value!.id))
+        : const AsyncValue.loading();
+
+    // Se um médium estiver selecionado, exibe o painel detalhado dele
+    if (_selectedMediumId != null && activeGiraAsync.value != null) {
+      return _MediumQueuePanel(
+        giraId: activeGiraAsync.value!.id,
+        mediumId: _selectedMediumId!,
+        terreiroId: terreiroId,
+        onBack: () => setState(() => _selectedMediumId = null),
+      );
+    }
 
     return activeGiraAsync.when(
       data: (gira) {
@@ -128,163 +284,305 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
               );
             }
 
-            return Row(
-              children: [
-                // PAINEL ESQUERDO: Lista de Médiuns
-                Container(
-                  width: 300,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      right: BorderSide(color: Colors.grey[200]!),
-                    ),
-                  ),
+            return allTicketsAsync.when(
+              data: (allTickets) {
+                // Filtrar tickets emitidos (aguardando) de todos os médiuns e ordenar globalmente
+                final globalQueue = allTickets
+                    .where((t) => t.status == 'emitida')
+                    .toList();
+                globalQueue.sort((Ticket a, Ticket b) => a.ordemFila.compareTo(b.ordemFila));
+
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        color: Colors.brown[50],
-                        width: double.infinity,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Gira: ${gira.tema}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.brown[800],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${presentMediums.length} médium(s) presente(s)',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.brown[400]),
-                            ),
-                          ],
+                      // Seção: Próximas Senhas Gerais
+                      if (globalQueue.isNotEmpty) ...[
+                        Text(
+                          'PRÓXIMAS SENHAS GERAIS',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                              letterSpacing: 1.2),
                         ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: presentMediums.length,
-                          itemBuilder: (context, index) {
-                            final medium = presentMediums[index];
-                            final isSelected = _selectedMediumId == medium.id;
-                            return InkWell(
-                              onTap: () =>
-                                  setState(() => _selectedMediumId = medium.id),
-                              child: Container(
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 50,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: globalQueue.take(10).length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final ticket = globalQueue[index];
+                              final medium = mediums.firstWhere(
+                                  (m) => m.id == ticket.mediumId,
+                                  orElse: () => Medium(
+                                      id: '',
+                                      terreiroId: '',
+                                      nome: '?',
+                                      ativo: false));
+                              return Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
+                                    horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.brown[100]
-                                      : Colors.transparent,
-                                  border: Border(
-                                    bottom:
-                                        BorderSide(color: Colors.grey[200]!),
-                                    left: BorderSide(
-                                      color: isSelected
-                                          ? Colors.brown[700]!
-                                          : Colors.transparent,
-                                      width: 4,
-                                    ),
-                                  ),
+                                  color: Colors.white,
+                                  border: Border.all(color: Colors.brown[200]!),
+                                  borderRadius: BorderRadius.circular(25),
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor: isSelected
-                                          ? Colors.brown
-                                          : Colors.brown[200],
-                                      radius: 20,
-                                      child: Text(
-                                        medium.nome.isNotEmpty
-                                            ? medium.nome
-                                                .substring(0, 1)
-                                                .toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
+                                    Text(ticket.codigoSenha,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.brown[800],
+                                            fontSize: 16)),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                        width: 1,
+                                        height: 16,
+                                        color: Colors.grey[300]),
+                                    const SizedBox(width: 8),
+                                    Text(medium.nome.split(' ')[0],
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12)),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Grid de Médiuns Responsivo
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calcula o número de colunas baseado na largura disponível
+                            // Define um mínimo de largura por card (ex: 300px)
+                            final double itemWidth = 320;
+                            final int crossAxisCount = (constraints.maxWidth / itemWidth).floor().clamp(1, 6);
+                            
+                            return GridView.builder(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                mainAxisExtent: 220, // Aumentado para caber a entidade
+                              ),
+                              itemCount: presentMediums.length,
+                              itemBuilder: (context, index) {
+                                final medium = presentMediums[index];
+                                final mediumTickets = allTickets
+                                    .where((t) => t.mediumId == medium.id)
+                                    .toList();
+                                final emAtendimento = mediumTickets
+                                    .where((t) => t.status == 'chamada')
+                                    .toList();
+                                final naFila = mediumTickets
+                                    .where((t) => t.status == 'emitida')
+                                    .toList();
+                                // Ordenar fila para pegar o próximo
+                                naFila.sort((Ticket a, Ticket b) =>
+                                    a.ordemFila.compareTo(b.ordemFila));
+
+                                final bool isBusy = emAtendimento.isNotEmpty;
+                                final bool hasQueue = naFila.isNotEmpty;
+
+                                // Lógica da Entidade da Gira
+                                final giraLinha = gira.linha.toLowerCase();
+                                final activeEntities = medium.entidades
+                                    .where((e) => e.status == 'ativo')
+                                    .toList();
+                                String entidadeDisplay = 'Sem entidade';
+                                if (activeEntities.isNotEmpty) {
+                                  final match = activeEntities.firstWhere(
+                                    (e) =>
+                                        e.linha
+                                            .toLowerCase()
+                                            .contains(giraLinha) ||
+                                        giraLinha
+                                            .contains(e.linha.toLowerCase()),
+                                    orElse: () => activeEntities.first,
+                                  );
+                                  entidadeDisplay = match.entidadeNome;
+                                }
+
+                                return Card(
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
+                                  child: InkWell(
+                                    onTap: () => setState(
+                                        () => _selectedMediumId = medium.id),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            medium.nome,
-                                            style: TextStyle(
-                                              fontWeight: isSelected
-                                                  ? FontWeight.bold
-                                                  : FontWeight.w500,
-                                              fontSize: 14,
-                                            ),
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              CircleAvatar(
+                                                backgroundColor: isBusy
+                                                    ? Colors.orange[100]
+                                                    : Colors.green[100],
+                                                child: Text(
+                                                  medium.nome.isNotEmpty
+                                                      ? medium.nome[0]
+                                                          .toUpperCase()
+                                                      : '?',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: isBusy
+                                                          ? Colors.orange[800]
+                                                          : Colors.green[800]),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(medium.nome,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 16)),
+                                                    const SizedBox(height: 4),
+                                                    // ENTIDADE DO DIA
+                                                    Text(
+                                                      entidadeDisplay,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                          fontSize: 13,
+                                                          color:
+                                                              Colors.brown[600],
+                                                          fontStyle: FontStyle.italic),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      isBusy
+                                                          ? '● Em Atendimento'
+                                                          : '○ Livre',
+                                                      style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: isBusy
+                                                              ? Colors.orange[
+                                                                  800]
+                                                              : Colors.green[
+                                                                  800],
+                                                          fontWeight:
+                                                              FontWeight.w500),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            medium.entidades
-                                                .where(
-                                                    (e) => e.status == 'ativo')
-                                                .map((e) => e.entidadeNome)
-                                                .join(', '),
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey[600]),
-                                            overflow: TextOverflow.ellipsis,
+                                          const Spacer(),
+                                          // Status da fila
+                                          Row(
+                                            children: [
+                                              Icon(Icons.people,
+                                                  size: 16,
+                                                  color: Colors.grey[600]),
+                                              const SizedBox(width: 4),
+                                              Text('${naFila.length} na fila',
+                                                  style: TextStyle(
+                                                      color: Colors.grey[800],
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // Botão de Ação
+                                          SizedBox(
+                                            width: double.infinity,
+                                            height: 40,
+                                            child: isBusy
+                                                ? OutlinedButton(
+                                                    onPressed: () => setState(() =>
+                                                        _selectedMediumId =
+                                                            medium.id),
+                                                    style: OutlinedButton
+                                                        .styleFrom(
+                                                      foregroundColor:
+                                                          Colors.orange[800],
+                                                      side: BorderSide(
+                                                          color: Colors
+                                                              .orange[200]!),
+                                                    ),
+                                                    child: Text(
+                                                        'ATENDENDO: ${emAtendimento.first.codigoSenha}'),
+                                                  )
+                                                : ElevatedButton(
+                                                    onPressed: hasQueue
+                                                        ? () {
+                                                            // Chamar próxima
+                                                            ref
+                                                                .read(
+                                                                    queueRepositoryProvider)
+                                                                .callTicket(naFila
+                                                                    .first.id);
+                                                          }
+                                                        : null,
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor:
+                                                          Colors.brown,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      disabledBackgroundColor:
+                                                          Colors.grey[200],
+                                                      disabledForegroundColor:
+                                                          Colors.grey[400],
+                                                    ),
+                                                    child: hasQueue
+                                                        ? const Text(
+                                                            'CHAMAR')
+                                                        : const Text(
+                                                            'SEM FILA'),
+                                                  ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                // PAINEL DIREITO: Fila de senhas do médium selecionado
-                Expanded(
-                  child: _selectedMediumId == null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.touch_app,
-                                  size: 64, color: Colors.grey[300]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Selecione um médium à esquerda',
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.grey[500]),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _MediumQueuePanel(
-                          giraId: gira.id,
-                          mediumId: _selectedMediumId!,
-                          terreiroId: terreiroId,
-                        ),
-                ),
-              ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(child: Text("Erro: $e")),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Erro: $err')),
+          error: (e, s) => Center(child: Text("Erro: $e")),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Erro: $err')),
+      error: (e, s) => Center(child: Text("Erro: $e")),
     );
   }
 }
@@ -296,11 +594,13 @@ class _MediumQueuePanel extends ConsumerWidget {
   final String giraId;
   final String mediumId;
   final String terreiroId;
+  final VoidCallback? onBack; // Callback opcional para voltar
 
   const _MediumQueuePanel({
     required this.giraId,
     required this.mediumId,
     required this.terreiroId,
+    this.onBack,
   });
 
   @override
@@ -321,7 +621,7 @@ class _MediumQueuePanel extends ConsumerWidget {
             // Filtrar tickets deste médium
             final mediumTickets =
                 allTickets.where((t) => t.mediumId == mediumId).toList();
-            mediumTickets.sort((a, b) => a.ordemFila.compareTo(b.ordemFila));
+            mediumTickets.sort((Ticket a, Ticket b) => a.ordemFila.compareTo(b.ordemFila));
 
             // Separar: chamada atual VS fila de espera
             final chamadaAtual =
@@ -333,7 +633,7 @@ class _MediumQueuePanel extends ConsumerWidget {
               backgroundColor: const Color(0xFFFAFAFA),
               body: Column(
                 children: [
-                  // Header com info do médium
+                  // Header com info do médium e botão Voltar
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -345,6 +645,13 @@ class _MediumQueuePanel extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
+                        if (onBack != null) ...[
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: onBack,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         CircleAvatar(
                           backgroundColor: Colors.brown,
                           radius: 28,
@@ -365,12 +672,29 @@ class _MediumQueuePanel extends ConsumerWidget {
                             children: [
                               Text(
                                 medium.nome,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 20,
                                     color: Colors.brown[800]),
                               ),
                               const SizedBox(height: 4),
+                              // Entidades agora aparecem apenas aqui no detalhe
+                              if (medium.entidades.isNotEmpty)
+                                Text(
+                                   medium.entidades
+                                      .where((e) => e.status == 'ativo')
+                                      .map((e) => e.entidadeNome)
+                                      .join(', '),
+                                   maxLines: 2,
+                                   overflow: TextOverflow.ellipsis,
+                                   style: TextStyle(
+                                       fontSize: 12,
+                                       color: Colors.grey[600]),
+                                 ),
+                                 
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   _infoChip(Icons.confirmation_number,
@@ -1098,7 +1422,7 @@ class _RedistribuirContent extends ConsumerWidget {
                       for (var ticket in tickets) {
                         batch.update(
                           firestore.collection('tickets').doc(ticket.id),
-                          {'mediumId': selectedDestId},
+                          {'mediumId': selectedDestId, 'isRedistributed': true},
                         );
                       }
 
@@ -1127,6 +1451,7 @@ class _RedistribuirContent extends ConsumerWidget {
     final firestore = FirebaseFirestore.instance;
     await firestore.collection('tickets').doc(ticket.id).update({
       'mediumId': destMediumId,
+      'isRedistributed': true,
     });
 
     final destMedium = destMediums.firstWhere((m) => m.id == destMediumId);

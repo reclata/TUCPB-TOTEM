@@ -106,6 +106,9 @@ class Medium {
   final int girasParticipadas;
   final int atendimentosRealizados;
   final int faltas;
+  
+  // Settings
+  final int maxFichas;
 
   const Medium({
     required this.id,
@@ -116,11 +119,13 @@ class Medium {
     this.girasParticipadas = 0,
     this.atendimentosRealizados = 0,
     this.faltas = 0,
+    this.maxFichas = 10,
   });
 
   factory Medium.fromJson(Map<String, dynamic> json) => _$MediumFromJson(json);
   Map<String, dynamic> toJson() => _$MediumToJson(this);
 }
+@TimestampConverter()
 
 @JsonSerializable()
 class Ticket {
@@ -141,6 +146,7 @@ class Ticket {
   @TimestampConverter()
   final DateTime? dataHoraAtendida;
   final int chamadaCount;
+  final bool isRedistributed;
 
   const Ticket({
     required this.id,
@@ -157,6 +163,7 @@ class Ticket {
     this.dataHoraChamada,
     this.dataHoraAtendida,
     this.chamadaCount = 0,
+    this.isRedistributed = false,
   });
 
 
