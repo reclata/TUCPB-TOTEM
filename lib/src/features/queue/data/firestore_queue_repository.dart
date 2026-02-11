@@ -1,5 +1,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 
@@ -24,76 +25,79 @@ class FirestoreQueueRepository {
             .toList());
   }
 
-  // Issue a new ticket
   Future<Ticket> issueTicket({
     required String terreiroId,
     required String giraId,
     required String entidadeId,
     required Medium medium,
   }) async {
-    final today = DateTime.now().toIso8601String().split('T').first; // YYYY-MM-DD
+    final today = DateTime.now().toIso8601String().split('T').first;
     
-    // Transaction to ensure sequential integrity
-    return _firestore.runTransaction((transaction) async {
-       // Get strict sequence from a counter document
-       final counterRef = _firestore.collection('counters').doc('${medium.id}_$today');
-       final counterSnap = await transaction.get(counterRef);
-       
-       int nextSeq = 1;
-       if (counterSnap.exists) {
-         nextSeq = (counterSnap.data()!['seq'] as int) + 1;
-         transaction.update(counterRef, {'seq': nextSeq});
-       } else {
-         transaction.set(counterRef, {'seq': nextSeq});
-       }
+    try {
+      debugPrint("DEBUG: Issuing real ticket for entity: $entidadeId");
+      
+      // 1. Get Current Sequence for Medium
+      final counterRef = _firestore.collection('counters').doc('${medium.id}_$today');
+      final counterSnap = await counterRef.get();
+      int nextSeq = 1;
+      if (counterSnap.exists) {
+        nextSeq = (counterSnap.data()?['seq'] as int? ?? 0) + 1;
+      }
 
-       // Get current max queue order for global queue appending
-       // This might be expensive if many docs, but usually manageable per day/entity
-       // Alternatively keep a 'queue_tail' counter per entity
-       final queueRef = _firestore.collection('queue_counters').doc('${entidadeId}_$today');
-       final queueSnap = await transaction.get(queueRef);
-       int nextOrder = 1;
-       if (queueSnap.exists) {
-         nextOrder = (queueSnap.data()!['order'] as int) + 1;
-         transaction.update(queueRef, {'order': nextOrder});
-       } else {
-         transaction.set(queueRef, {'order': nextOrder});
-       }
+      // 2. Get Current Queue Order for Entity
+      final queueRef = _firestore.collection('queue_counters').doc('${entidadeId}_$today');
+      final queueSnap = await queueRef.get();
+      int nextOrder = 1;
+      if (queueSnap.exists) {
+        nextOrder = (queueSnap.data()?['order'] as int? ?? 0) + 1;
+      }
 
-        // Generate initials from medium name (3 letters)
-        String initials;
-        final parts = medium.nome.split(' ').where((p) => p.isNotEmpty).toList();
-        if (parts.length >= 3) {
-          initials = (parts[0][0] + parts[1][0] + parts[2][0]).toUpperCase();
-        } else if (parts.length == 2) {
-          initials = (parts[0].substring(0, parts[0].length >= 2 ? 2 : 1) + parts[1][0]).toUpperCase();
-        } else if (parts.isNotEmpty) {
-          initials = parts[0].substring(0, parts[0].length >= 3 ? 3 : parts[0].length).toUpperCase();
-        } else {
-          initials = 'MED';
-        }
-        
-        final code = '$initials${nextSeq.toString().padLeft(4, '0')}';
-       
-       final newTicketRef = _firestore.collection('tickets').doc();
-       final ticket = Ticket(
-         id: newTicketRef.id,
-         terreiroId: terreiroId,
-         giraId: giraId,
-         entidadeId: entidadeId,
-         mediumId: medium.id,
-         codigoSenha: code,
-         sequencial: nextSeq,
-         dataRef: today,
-         status: 'emitida',
-         ordemFila: nextOrder,
-         dataHoraEmissao: DateTime.now(),
-         chamadaCount: 0,
-       );
-       
-       transaction.set(newTicketRef, ticket.toJson());
-       return ticket;
-    });
+      // 3. Generate initials (3 letters if possible)
+      String initials;
+      final parts = medium.nome.split(' ').where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 3) {
+        initials = (parts[0][0] + parts[1][0] + parts[2][0]).toUpperCase();
+      } else if (parts.length == 2) {
+        initials = (parts[0].substring(0, parts[0].length >= 2 ? 2 : 1) + parts[1][0]).toUpperCase();
+      } else if (parts.isNotEmpty) {
+        initials = parts[0].substring(0, parts[0].length >= 3 ? 3 : parts[0].length).toUpperCase();
+      } else {
+        initials = 'MED';
+      }
+      
+      final code = '$initials${nextSeq.toString().padLeft(3, '0')}';
+      final newTicketRef = _firestore.collection('tickets').doc();
+      
+      final ticket = Ticket(
+        id: newTicketRef.id,
+        terreiroId: terreiroId,
+        giraId: giraId,
+        entidadeId: entidadeId,
+        mediumId: medium.id,
+        codigoSenha: code,
+        sequencial: nextSeq,
+        dataRef: today,
+        status: 'emitida',
+        ordemFila: nextOrder,
+        dataHoraEmissao: DateTime.now(),
+        chamadaCount: 0,
+      );
+
+      // Perform all writes in a batch for atomic-like behavior on Web
+      final batch = _firestore.batch();
+      batch.set(newTicketRef, ticket.toJson());
+      batch.set(counterRef, {'seq': nextSeq}, SetOptions(merge: true));
+      batch.set(queueRef, {'order': nextOrder}, SetOptions(merge: true));
+      
+      await batch.commit();
+      
+      debugPrint("DEBUG: Ticket $code saved successfully via Batch");
+      return ticket;
+    } catch (e, stack) {
+      debugPrint("DEBUG SAVE ERROR: $e");
+      debugPrint("DEBUG STACK: $stack");
+      rethrow;
+    }
   }
 
   // Call next ticket

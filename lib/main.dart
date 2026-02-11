@@ -1,6 +1,6 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'src/features/auth/presentation/login_screen.dart';
+import 'package:terreiro_queue_system/src/features/auth/presentation/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -9,25 +9,31 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Screens
-import 'src/features/kiosk/presentation/kiosk_screen.dart';
-import 'src/features/admin/presentation/admin_screen.dart';
-import 'src/features/tv/presentation/tv_screen.dart';
-import 'src/features/queue/presentation/queue_web_screen.dart';
-import 'firebase_options.dart';
+import 'package:terreiro_queue_system/src/features/kiosk/presentation/kiosk_screen.dart';
+import 'package:terreiro_queue_system/src/features/admin/presentation/admin_screen.dart';
+import 'package:terreiro_queue_system/src/features/tv/presentation/tv_screen.dart';
+import 'package:terreiro_queue_system/src/features/queue/presentation/queue_web_screen.dart';
+import 'package:terreiro_queue_system/firebase_options.dart';
+
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:terreiro_queue_system/src/shared/providers/global_providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar formatação de data para pt_BR
+  await initializeDateFormatting('pt_BR', null);
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     
-    // Habilitar persistência offline para que os dados fiquem no navegador
-    // mesmo após fechar a aba ou reiniciar o aplicativo.
-    FirebaseFirestore.instance.settings = const Settings(
+    // Desabilitar persistência temporariamente para diagnosticar erro no Web
+    /*FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+    );*/
   } catch (e) {
     debugPrint("Firebase init failed: $e");
   }

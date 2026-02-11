@@ -255,6 +255,7 @@ class UsuariosScreen extends ConsumerWidget {
                   login: loginCtrl.text,
                   senha: senhaCtrl.text, // TODO: Hash in production
                   perfilAcesso: selectedPerfil,
+                  permissoes: const [],
                   ativo: true,
                 );
 
@@ -359,7 +360,8 @@ class UsuariosScreen extends ConsumerWidget {
                   nomeCompleto: nameCtrl.text,
                   login: loginCtrl.text,
                   senha: senhaCtrl.text,
-                  perfilAcesso: selectedPerfil,
+                   perfilAcesso: selectedPerfil,
+                  permissoes: usuario.permissoes,
                   ativo: ativo,
                 );
 

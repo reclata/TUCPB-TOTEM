@@ -52,6 +52,7 @@ dependencies:
   blue_thermal_printer: ^1.2.3
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +82,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/linhas/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

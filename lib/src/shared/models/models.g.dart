@@ -99,7 +99,7 @@ Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
   'terreiroId': instance.terreiroId,
   'nome': instance.nome,
   'ativo': instance.ativo,
-  'entidades': instance.entidades.map((e) => e.toJson()).toList(),
+  'entidades': instance.entidades,
   'girasParticipadas': instance.girasParticipadas,
   'atendimentosRealizados': instance.atendimentosRealizados,
   'faltas': instance.faltas,
@@ -172,6 +172,11 @@ Usuario _$UsuarioFromJson(Map<String, dynamic> json) => Usuario(
   login: json['login'] as String,
   senha: json['senha'] as String,
   perfilAcesso: json['perfilAcesso'] as String,
+  permissoes:
+      (json['permissoes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
   ativo: json['ativo'] as bool? ?? true,
 );
 
@@ -182,5 +187,6 @@ Map<String, dynamic> _$UsuarioToJson(Usuario instance) => <String, dynamic>{
   'login': instance.login,
   'senha': instance.senha,
   'perfilAcesso': instance.perfilAcesso,
+  'permissoes': instance.permissoes,
   'ativo': instance.ativo,
 };

@@ -105,7 +105,7 @@ class TvScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(child: Image.asset('assets/images/logo.jpg', height: 120)),
+                      Center(child: Image.asset('assets/images/logo.png', height: 120)),
                       const SizedBox(height: 40),
                       Text("ÚLTIMAS CHAMADAS", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white54)),
                       const SizedBox(height: 20),

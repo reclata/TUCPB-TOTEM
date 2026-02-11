@@ -170,6 +170,15 @@ class AdminRepository {
         .map((snap) => snap.docs.map((doc) => Usuario.fromJson(doc.data())).toList());
   }
 
+  // --- Ticket Management ---
+  Stream<List<Ticket>> streamTickets(String terreiroId) {
+    return _firestore
+        .collection('tickets')
+        .where('terreiroId', isEqualTo: terreiroId)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => Ticket.fromJson(doc.data())).toList());
+  }
+
   // --- Seed Data for Testing ---
   Future<void> generateSeedData(String terreiroId) async {
     // 1. Create some Entities

@@ -9,6 +9,7 @@ import '../data/admin_repository.dart';
 import 'package:terreiro_queue_system/src/shared/providers/global_providers.dart';
 import 'package:terreiro_queue_system/src/features/queue/data/firestore_queue_repository.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'usuarios_section.dart';
 import 'senhas_screen.dart';
 
@@ -61,6 +62,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA), // Off-white
       body: Row(
@@ -86,7 +88,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   child: Column(
                     children: [
                       Image.asset(
-                        'assets/images/logo.jpg',
+                        'assets/images/logo.png',
                         height: 80,
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.temple_buddhist, size: 60, color: Colors.white),
@@ -114,11 +116,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 const SizedBox(height: 20),
                 
                 // Menu Items
-                _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
-                _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
-                _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
-                _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
-                _buildMenuItem(Icons.people_outline, 'Usuários', 4),
+                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('dashboard') ?? false))
+                  _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
+                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('cadastros') ?? false))
+                  _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
+                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('calendario') ?? false))
+                  _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
+                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('senhas') ?? false))
+                  _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
+                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('usuarios') ?? false))
+                  _buildMenuItem(Icons.people_outline, 'Usuários', 4),
                 
                 const Spacer(),
                 
@@ -134,7 +141,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   title: Text('Totem', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
                   onTap: () => context.push('/kiosk'),
                 ),
-                const Divider(color: Colors.white24, height: 1),
+                
+                if (user?.perfilAcesso == 'admin')
+                  const Divider(color: Colors.white24, height: 1),
+                if (user?.perfilAcesso == 'admin')
+                  _buildMenuItem(Icons.settings_outlined, 'Configurações', 5),
+                
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.white70, size: 20),
                   title: Text('Sair', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
@@ -274,6 +286,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return 'Senhas';
       case 4:
         return 'Usuários';
+      case 5:
+        return 'Configurações de Acesso';
       default:
         return 'T.U.C.P.B. Token';
     }
@@ -282,7 +296,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
-        return _DashboardScreen();
+        return _DashboardScreen(onNavigate: (index) => setState(() => _selectedIndex = index));
       case 1:
         return _CadastrosScreen();
       case 2:
@@ -291,6 +305,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return const SenhasScreen();
       case 4:
         return const UsuariosScreen();
+      case 5:
+        return _ConfiguracoesScreen();
       default:
         return const Center(child: Text('Em construção'));
     }
@@ -301,12 +317,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 // DASHBOARD INICIAL
 // =============================================================================
 class _DashboardScreen extends ConsumerWidget {
+  final Function(int) onNavigate;
+
+  const _DashboardScreen({required this.onNavigate});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const terreiroId = 'demo-terreiro';
     final girasAsync = ref.watch(giraListProvider(terreiroId));
     final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
-    final entitiesAsync = ref.watch(entityListProvider(terreiroId));
+    final ticketsAsync = ref.watch(ticketListProvider(terreiroId));
+    final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -355,34 +376,207 @@ class _DashboardScreen extends ConsumerWidget {
                 ),
                 Icon(Icons.stacked_line_chart, size: 80, color: Colors.white.withOpacity(0.3)),
                 const SizedBox(width: 16),
-                Column(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          await ref.read(adminRepositoryProvider).generateSeedData(terreiroId);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Dados de teste gerados com sucesso!')),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erro ao gerar dados: $e')),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.auto_fix_high),
-                      label: const Text('GERAR DADOS'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  Column(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => onNavigate(3), // Navigate to Senhas index
+                        icon: const Icon(Icons.campaign),
+                        label: const Text('CHAMAR SENHAS'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.brown[700],
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () async {
+                          try {
+                            await ref.read(adminRepositoryProvider).generateSeedData(terreiroId);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Dados de teste gerados com sucesso!')),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao gerar dados: $e')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.auto_fix_high, size: 16),
+                        label: const Text('GERAR DADOS', style: TextStyle(fontSize: 10)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Porteiro Metrics Header
+          activeGiraAsync.when(
+            data: (activeGira) {
+              if (activeGira == null) {
+                return _buildStatCard(
+                  'Gira',
+                  'Nenhuma aberta',
+                  Icons.event_busy,
+                  Colors.grey,
+                );
+              }
+              
+              final presentMediumsCount = activeGira.presencas.values.where((p) => p).length;
+              final todayTickets = ticketsAsync.value?.where((t) => t.giraId == activeGira.id).toList() ?? [];
+              final assistanceCount = todayTickets.length;
+              final calledCount = todayTickets.where((t) => t.status != 'emitida').length;
+
+              return Column(
+                children: [
+                   Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Médiuns na Gira',
+                          presentMediumsCount.toString(),
+                          Icons.people,
+                          Colors.brown,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Assistência do Dia',
+                          assistanceCount.toString(),
+                          Icons.confirmation_number,
+                          Colors.amber[800]!,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Senhas Chamadas',
+                          calledCount.toString(),
+                          Icons.campaign,
+                          Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Real-time Table
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Visualização Geral das Senhas',
+                              style: GoogleFonts.outfit(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.brown[800],
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.sync, size: 14, color: Colors.green[700]),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Tempo Real',
+                                    style: TextStyle(color: Colors.green[700], fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(3),
+                            1: FlexColumnWidth(2),
+                            2: FlexColumnWidth(2),
+                          },
+                          border: TableBorder(
+                            horizontalInside: BorderSide(color: Colors.grey[200]!, width: 1),
+                          ),
+                          children: [
+                            TableRow(
+                              children: [
+                                _tableHeader('NOME DO MÉDIUM'),
+                                _tableHeader('SENHAS EMITIDAS'),
+                                _tableHeader('SENHAS CHAMADAS'),
+                              ],
+                            ),
+                            ...mediumsAsync.when(
+                              data: (mediums) {
+                                final presentMediums = mediums.where((m) => activeGira.presencas[m.id] ?? false).toList();
+                                presentMediums.sort((a, b) => a.nome.compareTo(b.nome));
+                                
+                                return presentMediums.map((m) {
+                                  final mTickets = todayTickets.where((t) => t.mediumId == m.id).toList();
+                                  final mIssued = mTickets.length;
+                                  final mCalled = mTickets.where((t) => t.status != 'emitida').length;
+                                  
+                                  return TableRow(
+                                    children: [
+                                      _tableCell(m.nome, isBold: true),
+                                      _tableCell('$mIssued', alignment: Alignment.center),
+                                      _tableCell('$mCalled', alignment: Alignment.center, color: Colors.green[700]),
+                                    ],
+                                  );
+                                }).toList();
+                              },
+                              loading: () => [TableRow(children: [const Text('...'), const Text('...'), const Text('...')])],
+                              error: (_, __) => [TableRow(children: [const Text('Erro'), const Text('Erro'), const Text('Erro')])],
+                            ),
+                          ],
+                        ),
+                        if (activeGira.presencas.values.every((p) => !p))
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: Center(
+                              child: Text(
+                                'Nenhum médium com presença marcada nesta gira.',
+                                style: TextStyle(color: Colors.grey[400], fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Text('Erro ao carregar métricas: $e'),
           ),
           
           const SizedBox(height: 32),
@@ -402,7 +596,7 @@ class _DashboardScreen extends ConsumerWidget {
               Expanded(
                 child: _buildStatCard(
                   'Atendimentos',
-                  entitiesAsync.value?.length.toString() ?? '...',
+                  ticketsAsync.value?.where((t) => t.status == 'atendida').length.toString() ?? '...',
                   Icons.poll,
                   Colors.green,
                 ),
@@ -430,89 +624,204 @@ class _DashboardScreen extends ConsumerWidget {
           
           const SizedBox(height: 32),
           
-          // Calendar and Recent Activity Row
-          Row(
+          // Charts Row
+          ticketsAsync.when(
+            data: (tickets) {
+              final giras = girasAsync.value ?? [];
+              final mediums = mediumsAsync.value ?? [];
+              
+              // Calcs for Charts
+              final completedTickets = tickets.where((t) => t.status == 'atendida' || t.dataHoraAtendida != null).toList();
+              
+              // 1. Atendimentos por Gira
+              final Map<String, int> attendanceByGira = {};
+              for (var t in completedTickets) {
+                final gira = giras.cast<Gira?>().firstWhere((g) => g?.id == t.giraId, orElse: () => null);
+                final giraLabel = gira != null ? gira.tema : 'Gira Antiga';
+                attendanceByGira[giraLabel] = (attendanceByGira[giraLabel] ?? 0) + 1;
+              }
+              
+              // 2. Atendimentos por Médium
+              final Map<String, int> attendanceByMedium = {};
+              for (var t in completedTickets) {
+                final medium = mediums.cast<Medium?>().firstWhere((m) => m?.id == t.mediumId, orElse: () => null);
+                final mediumLabel = medium != null ? medium.nome : 'Ex-Médium';
+                attendanceByMedium[mediumLabel] = (attendanceByMedium[mediumLabel] ?? 0) + 1;
+              }
+
+              return Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Gira Chart
+                      Expanded(
+                        child: _buildChartContainer(
+                          title: 'Atendimentos por Gira',
+                          child: _BarChartWidget(
+                            data: attendanceByGira,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Medium Chart
+                      Expanded(
+                        child: _buildChartContainer(
+                          title: 'Atendimentos por Médium',
+                          child: _BarChartWidget(
+                            data: attendanceByMedium,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Erro ao carregar dados dos gráficos: $e')),
+          ),
+          
+          const SizedBox(height: 32),
+
+          // Próximas Giras (Recuperado do antigo layout)
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Calendar Widget
-              Expanded(
-                flex: 2,
-                child: _CalendarWidget(giras: girasAsync.value ?? []),
-              ),
-              
-              const SizedBox(width: 24),
-              
-              // Recent Activity
-              Expanded(
-                flex: 1,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Próximas Giras',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.brown[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    girasAsync.when(
-                      data: (giras) {
-                        if (giras.isEmpty) {
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
-                                    const SizedBox(height: 12),
-                                    Text('Nenhuma gira agendada', style: TextStyle(color: Colors.grey[600])),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        final upcomingGiras = giras.where((g) => g.data.isAfter(DateTime.now().subtract(const Duration(days: 1)))).take(5).toList();
-                        return Column(
-                          children: upcomingGiras.map((gira) {
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: gira.status == 'aberta' ? Colors.green : Colors.brown[200],
-                                  child: Icon(
-                                    gira.status == 'aberta' ? Icons.radio_button_checked : Icons.schedule,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(gira.tema, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                                subtitle: Text(DateFormat('dd/MM/yyyy - HH:mm').format(gira.data), style: const TextStyle(fontSize: 12)),
-                                trailing: gira.status == 'aberta' 
-                                  ? const Chip(
-                                      label: Text('ATIVA', style: TextStyle(fontSize: 10)),
-                                      backgroundColor: Colors.green,
-                                      labelStyle: TextStyle(color: Colors.white),
-                                      padding: EdgeInsets.symmetric(horizontal: 8),
-                                    )
-                                  : null,
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, s) => Text('Erro: $e'),
-                    ),
-                  ],
+              Text(
+                'Próximas Giras',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown[800],
                 ),
               ),
+              const SizedBox(height: 16),
+              girasAsync.when(
+                data: (giras) {
+                  if (giras.isEmpty) {
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
+                              const SizedBox(height: 12),
+                              Text('Nenhuma gira agendada', style: TextStyle(color: Colors.grey[600])),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  final today = DateTime.now();
+                  final upcomingGiras = giras.where((g) => g.data.isAfter(today.subtract(const Duration(days: 1)))).take(5).toList();
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: upcomingGiras.length,
+                    itemBuilder: (ctx, index) {
+                      final gira = upcomingGiras[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: gira.status == 'aberta' ? Colors.green : Colors.brown[200],
+                            child: Icon(
+                              gira.status == 'aberta' ? Icons.radio_button_checked : Icons.schedule,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(gira.tema, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          subtitle: Text(DateFormat('dd/MM/yyyy - HH:mm').format(gira.data), style: const TextStyle(fontSize: 12)),
+                          trailing: gira.status == 'aberta' 
+                            ? const Chip(
+                                label: Text('ATIVA', style: TextStyle(fontSize: 10)),
+                                backgroundColor: Colors.green,
+                                labelStyle: TextStyle(color: Colors.white),
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                              )
+                            : null,
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) => Text('Erro: $e'),
+              ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tableHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.brown[400],
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _tableCell(String value, {bool isBold = false, Alignment alignment = Alignment.centerLeft, Color? color}) {
+    return Container(
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      child: Text(
+        value,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+          color: color ?? Colors.brown[900],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartContainer({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.brown[800],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 240,
+            child: child,
           ),
         ],
       ),
@@ -567,6 +876,111 @@ class _DashboardScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BarChartWidget extends StatelessWidget {
+  final Map<String, int> data;
+  final Color color;
+
+  const _BarChartWidget({required this.data, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return Center(
+        child: Text(
+          'Sem dados para exibir',
+          style: GoogleFonts.outfit(color: Colors.grey[400]),
+        ),
+      );
+    }
+
+    // Ordenar por valor (decrescente) e pegar top 5
+    final sortedEntries = data.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    final displayEntries = sortedEntries.take(5).toList();
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: (displayEntries.map((e) => e.value).fold(0, (prev, curr) => curr > prev ? curr : prev).toDouble() * 1.5).clamp(5, 1000),
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => Colors.brown[800]!,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              return BarTooltipItem(
+                '${displayEntries[groupIndex].key}\n',
+                GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                children: [
+                  TextSpan(
+                    text: '${rod.toY.toInt()} atendimentos',
+                    style: GoogleFonts.outfit(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= displayEntries.length) return const SizedBox();
+                final label = displayEntries[index].key;
+                final shortLabel = label.length > 8 ? '${label.substring(0, 7)}.' : label;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(shortLabel, style: GoogleFonts.outfit(fontSize: 9, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                );
+              },
+              reservedSize: 30,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                if (value % 1 != 0) return const SizedBox();
+                return Text(value.toInt().toString(), style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[400]));
+              },
+              reservedSize: 28,
+            ),
+          ),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey[100], strokeWidth: 1),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(displayEntries.length, (i) {
+          return BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: displayEntries[i].value.toDouble(),
+                color: color,
+                width: 22,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                backDrawRodData: BackgroundBarChartRodData(
+                  show: true,
+                  toY: (displayEntries.map((e) => e.value).fold(0, (prev, curr) => curr > prev ? curr : prev).toDouble() * 1.5).clamp(5, 1000),
+                  color: color.withOpacity(0.05),
+                ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -1066,102 +1480,120 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final girasListAsync = ref.watch(giraListProvider(terreiroId));
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          // Header do calendário - Navegação de meses
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.brown[800],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
-                  onPressed: () {
-                    setState(() {
-                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
-                    });
-                  },
-                ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
-                    });
-                  },
-                  child: Column(
+                // Header do calendário - Navegação de meses
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.brown[800],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _monthName(_currentMonth.month),
-                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left, color: Colors.white, size: 28),
+                        onPressed: () {
+                          setState(() {
+                            _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+                          });
+                        },
                       ),
-                      Text(
-                        '${_currentMonth.year}',
-                        style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+                          });
+                        },
+                        child: Column(
+                          children: [
+                            Text(
+                              _monthName(_currentMonth.month),
+                              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            Text(
+                              '${_currentMonth.year}',
+                              style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right, color: Colors.white, size: 28),
+                        onPressed: () {
+                          setState(() {
+                            _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+                          });
+                        },
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right, color: Colors.white, size: 28),
-                  onPressed: () {
-                    setState(() {
-                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
-                    });
-                  },
+                const SizedBox(height: 16),
+
+                // Dias da semana
+                Row(
+                  children: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) {
+                    return Expanded(
+                      child: Center(
+                        child: Text(
+                          day,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.brown[600],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+
+                // Grid do calendário
+                Expanded(
+                  child: girasListAsync.when(
+                    data: (giras) => _buildCalendarGrid(giras, terreiroId),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(child: Text('Erro: $err')),
+                  ),
+                ),
+
+                // Legenda
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegend(Colors.green, 'Aberta'),
+                    const SizedBox(width: 20),
+                    _buildLegend(Colors.blue, 'Agendada'),
+                    const SizedBox(width: 20),
+                    _buildLegend(Colors.grey, 'Encerrada'),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Dias da semana
-          Row(
-            children: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) {
-              return Expanded(
-                child: Center(
-                  child: Text(
-                    day,
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.brown[600],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+        ),
+        // FAB para criar nova gira
+        Positioned(
+          right: 24,
+          bottom: 24,
+          child: FloatingActionButton.extended(
+            onPressed: () => _showCreateGiraDialog(DateTime.now(), terreiroId),
+            backgroundColor: Colors.brown[700],
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.add),
+            label: const Text('Nova Gira'),
           ),
-          const SizedBox(height: 8),
-
-          // Grid do calendário
-          Expanded(
-            child: girasListAsync.when(
-              data: (giras) => _buildCalendarGrid(giras, terreiroId),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Erro: $err')),
-            ),
-          ),
-
-          // Legenda
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegend(Colors.green, 'Aberta'),
-              const SizedBox(width: 20),
-              _buildLegend(Colors.blue, 'Agendada'),
-              const SizedBox(width: 20),
-              _buildLegend(Colors.grey, 'Encerrada'),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1222,76 +1654,99 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               final dayGiras = girasByDate[dateKey] ?? [];
               final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
               final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+              final hasGira = dayGiras.isNotEmpty;
+              final statusColor = hasGira ? _statusColor(dayGiras.first.status) : null;
 
               return Expanded(
                 child: GestureDetector(
                   onTap: () {
-                    if (dayGiras.isEmpty) {
+                    if (!hasGira) {
                       _showCreateGiraDialog(date, terreiroId);
+                    } else {
+                      _showEditGiraDialog(dayGiras.first, terreiroId);
                     }
                   },
                   child: Container(
                     margin: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: isToday ? Colors.brown[50] : Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+                      color: hasGira ? statusColor : (isToday ? Colors.brown[50] : Colors.white),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isToday ? Colors.brown : Colors.grey[200]!,
                         width: isToday ? 2 : 1,
                       ),
+                      boxShadow: hasGira ? [
+                        BoxShadow(
+                          color: statusColor!.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        )
+                      ] : null,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Número do dia
                         Padding(
-                          padding: const EdgeInsets.only(left: 6, top: 4),
+                          padding: const EdgeInsets.only(left: 8, top: 6),
                           child: Text(
                             '$dayNumber',
                             style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                              color: isPast && dayGiras.isEmpty ? Colors.grey[400] : Colors.brown[800],
+                              fontSize: 14,
+                              fontWeight: (isToday || hasGira) ? FontWeight.bold : FontWeight.w500,
+                              color: hasGira 
+                                ? Colors.white 
+                                : (isPast && dayGiras.isEmpty ? Colors.grey[400] : Colors.brown[800]),
                             ),
                           ),
                         ),
-                        // Indicadores de gira
-                        if (dayGiras.isNotEmpty)
+                        // Indicadores de gira (Título no centro)
+                        if (hasGira)
                           Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-                              child: Column(
-                                children: dayGiras.take(3).map((gira) {
-                                  return Flexible(
-                                    child: GestureDetector(
-                                      onTap: () => _showEditGiraDialog(gira, terreiroId),
-                                      child: Container(
-                                        width: double.infinity,
-                                        margin: const EdgeInsets.only(bottom: 2),
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: _statusColor(gira.status),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          gira.linha,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
-                                        ),
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  dayGiras.first.linha,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    shadows: [
+                                      const Shadow(
+                                        blurRadius: 2,
+                                        color: Colors.black26,
+                                        offset: Offset(0, 1),
                                       ),
-                                    ),
-                                  );
-                                }).toList(),
+                                    ],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
                               ),
                             ),
                           )
                         else
                           const Spacer(),
+                        
+                        // Pequeno indicador se houver mais de uma gira no mesmo dia (raro)
+                        if (dayGiras.length > 1)
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: Container(
+                              margin: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.white24,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '+${dayGiras.length - 1}',
+                                style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1326,13 +1781,20 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final horarioInicioCtrl = TextEditingController(text: '19:00');
     final horarioKioskCtrl = TextEditingController(text: '18:00');
     final horarioEncerramentoCtrl = TextEditingController(text: '20:00');
+    final linhaCtrl = TextEditingController();
     String? selectedLinha;
+    DateTime selectedDate = date;
     bool encerramentoAtivo = false;
     Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
-    final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
+    final registeredLinhas = linhasAsync.value ?? [];
+    // Unificar LINHA_OPTIONS com as linhas já registradas nos médiuns
+    final dropdownItems = {
+      ...LINHA_OPTIONS,
+      ...registeredLinhas,
+    }.toList();
+    dropdownItems.sort();
     
     // Buscar todos os médiuns
     final mediumsAsync = ref.read(mediumListProvider(terreiroId));
@@ -1364,29 +1826,70 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                 Icon(Icons.calendar_today, color: Colors.brown[700]),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Nova Gira - ${DateFormat('dd/MM/yyyy').format(date)}',
+                  child: Text('Nova Gira',
                     style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
             ),
             content: SizedBox(
               width: 500,
-              height: 500,
+              height: 520,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Linha Principal
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: "Linha Principal",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.auto_awesome),
+                    // Data
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedDate = picked);
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: "Data da Gira",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.calendar_month),
+                          suffixIcon: const Icon(Icons.edit, size: 18),
+                        ),
+                        child: Text(DateFormat('dd/MM/yyyy - EEEE', 'pt_BR').format(selectedDate)),
                       ),
-                      value: selectedLinha,
-                      items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                      onChanged: _onLinhaChanged,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Linha Principal - Autocomplete editável
+                    Autocomplete<String>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return dropdownItems;
+                        return dropdownItems.where((l) =>
+                          l.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                      },
+                      onSelected: (val) => _onLinhaChanged(val),
+                      fieldViewBuilder: (ctx2, controller, focusNode, onFieldSubmitted) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: "Linha Principal",
+                            hintText: "Selecione ou digite",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: const Icon(Icons.auto_awesome),
+                          ),
+                          onChanged: (val) {
+                            if (val.isNotEmpty) {
+                              _onLinhaChanged(val);
+                            }
+                          },
+                          onSubmitted: (_) => onFieldSubmitted(),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
 
@@ -1546,7 +2049,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                   final newGira = Gira(
                     id: const Uuid().v4(),
                     terreiroId: terreiroId,
-                    data: date,
+                    data: selectedDate,
                     tema: temaCtrl.text.isEmpty ? 'Gira de ${selectedLinha!}' : temaCtrl.text,
                     linha: selectedLinha!,
                     status: 'agendada',
@@ -1587,17 +2090,21 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final horarioInicioCtrl = TextEditingController(text: gira.horarioInicio);
     final horarioKioskCtrl = TextEditingController(text: gira.horarioKiosk);
     final horarioEncerramentoCtrl = TextEditingController(text: gira.horarioEncerramentoKiosk ?? '20:00');
+    final linhaCtrl = TextEditingController();
     String selectedLinha = gira.linha;
     String selectedStatus = gira.status;
+    DateTime selectedDate = gira.data;
     bool encerramentoAtivo = gira.encerramentoKioskAtivo;
     Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
-    final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
-    if (!dropdownItems.contains(selectedLinha)) {
-      dropdownItems.add(selectedLinha);
-    }
+    final registeredLinhas = linhasAsync.value ?? [];
+    // Unificar LINHA_OPTIONS com as linhas já registradas nos médiuns
+    final dropdownItems = {
+      ...LINHA_OPTIONS,
+      ...registeredLinhas,
+    }.toList();
+    dropdownItems.sort();
     
     // Buscar todos os médiuns
     final mediumsAsync = ref.read(mediumListProvider(terreiroId));
@@ -1613,6 +2120,19 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           final activeMediums = allMediums.where((m) => m.ativo).toList();
+
+          void _onLinhaChanged(String? val) {
+            if (val != null) {
+              setDialogState(() {
+                selectedLinha = val;
+                // Pré-selecionar médiuns da nova linha
+                for (var m in activeMediums) {
+                  final hasLinha = m.entidades.any((e) => e.linha == val);
+                  if (hasLinha) mediumsSelected[m.id] = true;
+                }
+              });
+            }
+          }
           
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1621,7 +2141,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                 Icon(Icons.edit_calendar, color: Colors.brown[700]),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Editar Gira - ${DateFormat('dd/MM/yyyy').format(gira.data)}',
+                  child: Text('Editar Gira',
                     style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
@@ -1634,6 +2154,31 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Data
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedDate = picked);
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: "Data da Gira",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.calendar_month),
+                          suffixIcon: const Icon(Icons.edit, size: 18),
+                        ),
+                        child: Text(DateFormat('dd/MM/yyyy - EEEE', 'pt_BR').format(selectedDate)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // Status
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
@@ -1659,26 +2204,32 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Linha
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        labelText: "Linha Principal",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.auto_awesome),
-                      ),
-                      value: selectedLinha,
-                      items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() {
-                            selectedLinha = val;
-                            // Pré-selecionar médiuns da nova linha
-                            for (var m in activeMediums) {
-                              final hasLinha = m.entidades.any((e) => e.linha == val);
-                              if (hasLinha) mediumsSelected[m.id] = true;
+                    // Linha Principal - Autocomplete editável
+                    Autocomplete<String>(
+                      initialValue: TextEditingValue(text: selectedLinha),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return dropdownItems;
+                        return dropdownItems.where((l) =>
+                          l.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                      },
+                      onSelected: (val) => _onLinhaChanged(val),
+                      fieldViewBuilder: (ctx2, controller, focusNode, onFieldSubmitted) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: "Linha Principal",
+                            hintText: "Selecione ou digite",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: const Icon(Icons.auto_awesome),
+                          ),
+                          onChanged: (val) {
+                            if (val.isNotEmpty) {
+                              _onLinhaChanged(val);
                             }
-                          });
-                        }
+                          },
+                          onSubmitted: (_) => onFieldSubmitted(),
+                        );
                       },
                     ),
                     const SizedBox(height: 16),
@@ -1827,7 +2378,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           final updatedGira = Gira(
                             id: gira.id,
                             terreiroId: gira.terreiroId,
-                            data: gira.data,
+                            data: selectedDate,
                             tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
                             linha: selectedLinha,
                             status: selectedStatus,
@@ -1914,7 +2465,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                   final updatedGira = Gira(
                     id: gira.id,
                     terreiroId: gira.terreiroId,
-                    data: gira.data,
+                    data: selectedDate,
                     tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
                     linha: selectedLinha,
                     status: selectedStatus,
@@ -2938,5 +3489,162 @@ class _EntitiesList extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+// =============================================================================
+// TELA DE CONFIGURAÇÕES DE ACESSO
+// =============================================================================
+class _ConfiguracoesScreen extends ConsumerStatefulWidget {
+  @override
+  _ConfiguracoesScreenState createState() => _ConfiguracoesScreenState();
+}
+
+class _ConfiguracoesScreenState extends ConsumerState<_ConfiguracoesScreen> {
+  String? _selectedUsuarioId;
+
+  final List<Map<String, String>> _availableFeatures = [
+    {'id': 'dashboard', 'label': 'Dashboard', 'icon': 'dashboard'},
+    {'id': 'cadastros', 'label': 'Cadastros', 'icon': 'folder_shared'},
+    {'id': 'calendario', 'label': 'Calendário', 'icon': 'calendar_month'},
+    {'id': 'senhas', 'label': 'Senhas', 'icon': 'confirmation_number'},
+    {'id': 'usuarios', 'label': 'Usuários', 'icon': 'people'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    const terreiroId = 'demo-terreiro';
+    final usuariosAsync = ref.watch(streamUsuariosProvider(terreiroId));
+
+    return Row(
+      children: [
+        // Lista de Usuários
+        Container(
+          width: 350,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(right: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: usuariosAsync.when(
+            data: (usuarios) {
+              return ListView.builder(
+                itemCount: usuarios.length,
+                itemBuilder: (context, index) {
+                  final user = usuarios[index];
+                  final isSelected = _selectedUsuarioId == user.id;
+                  
+                  return ListTile(
+                    selected: isSelected,
+                    selectedTileColor: Colors.brown[50],
+                    leading: CircleAvatar(
+                      backgroundColor: user.perfilAcesso == 'admin' ? Colors.brown : Colors.grey[300],
+                      child: Text(user.nomeCompleto.isNotEmpty ? user.nomeCompleto[0].toUpperCase() : '?', 
+                        style: TextStyle(color: user.perfilAcesso == 'admin' ? Colors.white : Colors.black87)),
+                    ),
+                    title: Text(user.nomeCompleto, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                    subtitle: Text(user.perfilAcesso.toUpperCase()),
+                    onTap: () => setState(() => _selectedUsuarioId = user.id),
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Erro: $e')),
+          ),
+        ),
+        
+        // Detalhes da Permissão
+        Expanded(
+          child: _selectedUsuarioId == null 
+            ? Center(child: Text('Selecione um usuário para configurar permissões', style: GoogleFonts.outfit(color: Colors.grey)))
+            : usuariosAsync.when(
+                data: (usuarios) {
+                  final user = usuarios.firstWhere((u) => u.id == _selectedUsuarioId);
+                  
+                  return Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Permissões de Acesso: ${user.nomeCompleto}', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        Text('Selecione abaixo quais funcionalidades este usuário poderá visualizar no sistema.', style: TextStyle(color: Colors.grey[600])),
+                        const SizedBox(height: 32),
+                        
+                        if (user.perfilAcesso == 'admin')
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12)),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info, color: Colors.blue[800]),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text('Usuários com perfil Administrador têm acesso total a todas as funcionalidades por padrão.', 
+                                    style: TextStyle(color: Colors.blue[900])),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: ListView(
+                              children: _availableFeatures.map((feature) {
+                                final bool hasAccess = user.permissoes.contains(feature['id']);
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: SwitchListTile(
+                                    title: Text(feature['label']!, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                                    secondary: Icon(_getIconData(feature['icon']!), color: Colors.brown[700]),
+                                    value: hasAccess,
+                                    activeColor: Colors.brown,
+                                    onChanged: (bool value) async {
+                                      final newList = List<String>.from(user.permissoes);
+                                      if (value) {
+                                        newList.add(feature['id']!);
+                                      } else {
+                                        newList.remove(feature['id']!);
+                                      }
+                                      
+                                      final updatedUser = Usuario(
+                                        id: user.id,
+                                        terreiroId: user.terreiroId,
+                                        nomeCompleto: user.nomeCompleto,
+                                        login: user.login,
+                                        senha: user.senha,
+                                        perfilAcesso: user.perfilAcesso,
+                                        permissoes: newList,
+                                        ativo: user.ativo,
+                                      );
+                                      
+                                      await ref.read(adminRepositoryProvider).updateUsuario(updatedUser);
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Erro: $e')),
+              ),
+        ),
+      ],
+    );
+  }
+
+  IconData _getIconData(String icon) {
+    switch (icon) {
+      case 'dashboard': return Icons.dashboard_outlined;
+      case 'folder_shared': return Icons.folder_shared_outlined;
+      case 'calendar_month': return Icons.calendar_month_outlined;
+      case 'confirmation_number': return Icons.confirmation_number_outlined;
+      case 'people': return Icons.people_outline;
+      default: return Icons.help_outline;
+    }
   }
 }

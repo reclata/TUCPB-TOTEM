@@ -172,6 +172,7 @@ class Usuario {
   final String login;
   final String senha; // In production, this should be hashed
   final String perfilAcesso; // 'admin', 'operador', 'visualizador'
+  final List<String> permissoes; // Lista de funcionalidades permitidas
   final bool ativo;
 
   const Usuario({
@@ -181,6 +182,7 @@ class Usuario {
     required this.login,
     required this.senha,
     required this.perfilAcesso,
+    this.permissoes = const [],
     this.ativo = true,
   });
 

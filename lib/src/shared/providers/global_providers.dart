@@ -1,6 +1,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/admin/data/admin_repository.dart';
+import 'package:terreiro_queue_system/src/features/admin/data/admin_repository.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 
 // Providers shared across Admin, Kiosk, TV
@@ -27,6 +27,10 @@ final entityListProvider = StreamProvider.family<List<Entidade>, String>((ref, t
 
 final mediumListProvider = StreamProvider.family<List<Medium>, String>((ref, terreiroId) {
   return ref.watch(adminRepositoryProvider).streamMediums(terreiroId);
+});
+
+final ticketListProvider = StreamProvider.family<List<Ticket>, String>((ref, terreiroId) {
+  return ref.watch(adminRepositoryProvider).streamTickets(terreiroId);
 });
 
 // Join Medium + Entity to show usable buttons

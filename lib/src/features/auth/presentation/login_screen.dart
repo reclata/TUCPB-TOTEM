@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                    color: Colors.white,
                  ),
                  child: Image.asset(
-                   'assets/images/logo.jpg',
+                   'assets/images/logo.png',
                    fit: BoxFit.contain,
                    errorBuilder: (context, error, stackTrace) {
                      return const Icon(Icons.temple_buddhist, size: 80, color: Colors.brown);

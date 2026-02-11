@@ -447,33 +447,33 @@ class _MediumQueuePanel extends ConsumerWidget {
                                 },
                               ),
                               const SizedBox(width: 12),
-                              // Marcar como atendida
+                              // Confirmar Atendimento
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 12),
+                                      horizontal: 24, vertical: 16),
                                 ),
                                 icon: const Icon(Icons.check_circle),
-                                label: const Text('ATENDIDA'),
+                                label: const Text('CONFIRMAR ATENDIMENTO'),
                                 onPressed: () {
                                   ref
                                       .read(queueRepositoryProvider)
                                       .markAttended(chamadaAtual.first.id);
                                 },
                               ),
-                              const SizedBox(width: 12),
-                              // Não compareceu
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
+                              const SizedBox(width: 16),
+                              // Não compareceu - Voltar para o fim da fila
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.orange[900],
+                                  side: BorderSide(color: Colors.orange[900]!),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 12),
+                                      horizontal: 24, vertical: 16),
                                 ),
                                 icon: const Icon(Icons.person_off),
-                                label: const Text('NÃO COMPARECEU'),
+                                label: const Text('NÃO COMPARECEU (FIM DA FILA)'),
                                 onPressed: () {
                                   ref
                                       .read(queueRepositoryProvider)
