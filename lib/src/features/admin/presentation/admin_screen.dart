@@ -1323,259 +1323,629 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
 
   void _showCreateGiraDialog(DateTime date, String terreiroId) {
     final temaCtrl = TextEditingController();
+    final horarioInicioCtrl = TextEditingController(text: '19:00');
+    final horarioKioskCtrl = TextEditingController(text: '18:00');
+    final horarioEncerramentoCtrl = TextEditingController(text: '20:00');
     String? selectedLinha;
+    bool encerramentoAtivo = false;
+    Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
     final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
     final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
     
+    // Buscar todos os médiuns
+    final mediumsAsync = ref.read(mediumListProvider(terreiroId));
+    final allMediums = mediumsAsync.value ?? [];
+    
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.calendar_today, color: Colors.brown[700]),
-              const SizedBox(width: 10),
-              Text('Nova Gira - ${DateFormat('dd/MM/yyyy').format(date)}',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        builder: (ctx, setDialogState) {
+          // Quando a linha muda, pré-selecionar médiuns da linha
+          void _onLinhaChanged(String? val) {
+            selectedLinha = val;
+            mediumsSelected.clear();
+            if (val != null) {
+              for (var m in allMediums.where((m) => m.ativo)) {
+                final hasLinha = m.entidades.any((e) => e.linha == val);
+                mediumsSelected[m.id] = hasLinha;
+              }
+            }
+            setDialogState(() {});
+          }
+          
+          final activeMediums = allMediums.where((m) => m.ativo).toList();
+          
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
               children: [
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Linha Principal",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.auto_awesome),
-                  ),
-                  value: selectedLinha,
-                  items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                  onChanged: (val) => setDialogState(() => selectedLinha = val),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: temaCtrl,
-                  decoration: InputDecoration(
-                    labelText: "Tema da Gira (opcional)",
-                    hintText: "Ex: Gira de Encerramento",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.subject),
-                  ),
+                Icon(Icons.calendar_today, color: Colors.brown[700]),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Nova Gira - ${DateFormat('dd/MM/yyyy').format(date)}',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("CANCELAR"),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: SizedBox(
+              width: 500,
+              height: 500,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Linha Principal
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Linha Principal",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.auto_awesome),
+                      ),
+                      value: selectedLinha,
+                      items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                      onChanged: _onLinhaChanged,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Nome da Gira
+                    TextField(
+                      controller: temaCtrl,
+                      decoration: InputDecoration(
+                        labelText: "Nome da Gira",
+                        hintText: "Ex: Gira de Caboclo",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.subject),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Horários em Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: horarioInicioCtrl,
+                            decoration: InputDecoration(
+                              labelText: "Horário Início",
+                              hintText: "19:00",
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: const Icon(Icons.schedule, size: 20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: horarioKioskCtrl,
+                            decoration: InputDecoration(
+                              labelText: "Liberação Kiosk",
+                              hintText: "18:00",
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: const Icon(Icons.tablet_android, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Encerramento Kiosk com Flag
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        color: encerramentoAtivo ? Colors.orange[50] : Colors.grey[50],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.timer_off, size: 20, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              const Expanded(child: Text("Encerramento automático do Kiosk")),
+                              Switch(
+                                value: encerramentoAtivo,
+                                activeColor: Colors.orange,
+                                onChanged: (val) => setDialogState(() => encerramentoAtivo = val),
+                              ),
+                            ],
+                          ),
+                          if (encerramentoAtivo) ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: horarioEncerramentoCtrl,
+                              decoration: InputDecoration(
+                                labelText: "Horário Encerramento",
+                                hintText: "20:00",
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(Icons.lock_clock, size: 20),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Médiuns Participantes
+                    Text("Médiuns Participantes",
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.brown[700]),
+                    ),
+                    const SizedBox(height: 8),
+                    if (activeMediums.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text("Nenhum médium ativo cadastrado.", style: TextStyle(color: Colors.grey)),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: activeMediums.map((m) {
+                            final isSelected = mediumsSelected[m.id] ?? false;
+                            final linhas = m.entidades.map((e) => e.linha).toSet().join(', ');
+                            return CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              title: Text(m.nome, style: const TextStyle(fontSize: 14)),
+                              subtitle: Text(linhas, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                              value: isSelected,
+                              activeColor: Colors.brown,
+                              onChanged: (val) {
+                                setDialogState(() => mediumsSelected[m.id] = val ?? false);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              onPressed: () async {
-                if (selectedLinha == null) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Selecione a linha da gira')),
-                  );
-                  return;
-                }
-                final newGira = Gira(
-                  id: const Uuid().v4(),
-                  terreiroId: terreiroId,
-                  data: date,
-                  tema: temaCtrl.text.isEmpty ? 'Gira de ${selectedLinha!}' : temaCtrl.text,
-                  linha: selectedLinha!,
-                  status: 'agendada',
-                );
-                try {
-                  await ref.read(adminRepositoryProvider).createGira(newGira);
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Gira criada com sucesso!'), backgroundColor: Colors.green),
-                    );
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                    );
-                  }
-                }
-              },
-              label: const Text("CRIAR GIRA"),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("CANCELAR"),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  if (selectedLinha == null) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('Selecione a linha da gira')),
+                    );
+                    return;
+                  }
+                  final participantes = mediumsSelected.entries
+                    .where((e) => e.value)
+                    .map((e) => e.key)
+                    .toList();
+
+                  // Criar presenças a partir dos participantes
+                  final presencas = <String, bool>{};
+                  for (var id in participantes) {
+                    presencas[id] = true;
+                  }
+                  
+                  final newGira = Gira(
+                    id: const Uuid().v4(),
+                    terreiroId: terreiroId,
+                    data: date,
+                    tema: temaCtrl.text.isEmpty ? 'Gira de ${selectedLinha!}' : temaCtrl.text,
+                    linha: selectedLinha!,
+                    status: 'agendada',
+                    horarioInicio: horarioInicioCtrl.text,
+                    horarioKiosk: horarioKioskCtrl.text,
+                    horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
+                    encerramentoKioskAtivo: encerramentoAtivo,
+                    mediumsParticipantes: participantes,
+                    presencas: presencas,
+                  );
+                  try {
+                    await ref.read(adminRepositoryProvider).createGira(newGira);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Gira criada com sucesso!'), backgroundColor: Colors.green),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                },
+                label: const Text("CRIAR GIRA"),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   void _showEditGiraDialog(Gira gira, String terreiroId) {
     final temaCtrl = TextEditingController(text: gira.tema);
+    final horarioInicioCtrl = TextEditingController(text: gira.horarioInicio);
+    final horarioKioskCtrl = TextEditingController(text: gira.horarioKiosk);
+    final horarioEncerramentoCtrl = TextEditingController(text: gira.horarioEncerramentoKiosk ?? '20:00');
     String selectedLinha = gira.linha;
     String selectedStatus = gira.status;
+    bool encerramentoAtivo = gira.encerramentoKioskAtivo;
+    Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
     final linhasOptions = linhasAsync.value ?? LINHA_OPTIONS;
     final dropdownItems = (linhasOptions.isEmpty ? LINHA_OPTIONS : linhasOptions);
-    // Garantir que a linha atual está na lista
     if (!dropdownItems.contains(selectedLinha)) {
       dropdownItems.add(selectedLinha);
+    }
+    
+    // Buscar todos os médiuns
+    final mediumsAsync = ref.read(mediumListProvider(terreiroId));
+    final allMediums = mediumsAsync.value ?? [];
+    
+    // Inicializar seleção com os participantes atuais
+    for (var m in allMediums.where((m) => m.ativo)) {
+      mediumsSelected[m.id] = gira.mediumsParticipantes.contains(m.id) || (gira.presencas[m.id] ?? false);
     }
     
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.edit_calendar, color: Colors.brown[700]),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('Editar Gira - ${DateFormat('dd/MM/yyyy').format(gira.data)}',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        builder: (ctx, setDialogState) {
+          final activeMediums = allMediums.where((m) => m.ativo).toList();
+          
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
               children: [
-                // Status
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Status",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.flag),
-                  ),
-                  value: selectedStatus,
-                  items: ['agendada', 'aberta', 'encerrada'].map((s) => DropdownMenuItem(
-                    value: s,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 10, height: 10,
-                          decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(s[0].toUpperCase() + s.substring(1)),
-                      ],
-                    ),
-                  )).toList(),
-                  onChanged: (val) => setDialogState(() => selectedStatus = val!),
-                ),
-                const SizedBox(height: 16),
-                // Linha
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Linha Principal",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.auto_awesome),
-                  ),
-                  value: selectedLinha,
-                  items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                  onChanged: (val) => setDialogState(() => selectedLinha = val!),
-                ),
-                const SizedBox(height: 16),
-                // Tema
-                TextField(
-                  controller: temaCtrl,
-                  decoration: InputDecoration(
-                    labelText: "Tema da Gira",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.subject),
-                  ),
+                Icon(Icons.edit_calendar, color: Colors.brown[700]),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Editar Gira - ${DateFormat('dd/MM/yyyy').format(gira.data)}',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
             ),
-          ),
-          actions: [
-            // Botão excluir
-            TextButton.icon(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 18),
-              label: const Text("EXCLUIR", style: TextStyle(color: Colors.red)),
-              onPressed: () {
-                showDialog(
-                  context: ctx,
-                  builder: (confirmCtx) => AlertDialog(
-                    title: const Text('Confirmar exclusão'),
-                    content: Text('Deseja excluir a gira "${gira.tema}"?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(confirmCtx), child: const Text('CANCELAR')),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                        onPressed: () async {
-                          await ref.read(adminRepositoryProvider).deleteGira(gira.id);
-                          if (confirmCtx.mounted) Navigator.pop(confirmCtx);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Gira excluída'), backgroundColor: Colors.orange),
+            content: SizedBox(
+              width: 500,
+              height: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Status
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Status",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.flag),
+                      ),
+                      value: selectedStatus,
+                      items: ['agendada', 'aberta', 'encerrada'].map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10, height: 10,
+                              decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(s[0].toUpperCase() + s.substring(1)),
+                          ],
+                        ),
+                      )).toList(),
+                      onChanged: (val) => setDialogState(() => selectedStatus = val!),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Linha
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Linha Principal",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.auto_awesome),
+                      ),
+                      value: selectedLinha,
+                      items: dropdownItems.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            selectedLinha = val;
+                            // Pré-selecionar médiuns da nova linha
+                            for (var m in activeMediums) {
+                              final hasLinha = m.entidades.any((e) => e.linha == val);
+                              if (hasLinha) mediumsSelected[m.id] = true;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Nome da Gira
+                    TextField(
+                      controller: temaCtrl,
+                      decoration: InputDecoration(
+                        labelText: "Nome da Gira",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.subject),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Horários
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: horarioInicioCtrl,
+                            decoration: InputDecoration(
+                              labelText: "Horário Início",
+                              hintText: "19:00",
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: const Icon(Icons.schedule, size: 20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: horarioKioskCtrl,
+                            decoration: InputDecoration(
+                              labelText: "Liberação Kiosk",
+                              hintText: "18:00",
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: const Icon(Icons.tablet_android, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Encerramento Kiosk com Flag
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        color: encerramentoAtivo ? Colors.orange[50] : Colors.grey[50],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.timer_off, size: 20, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              const Expanded(child: Text("Encerramento automático do Kiosk")),
+                              Switch(
+                                value: encerramentoAtivo,
+                                activeColor: Colors.orange,
+                                onChanged: (val) => setDialogState(() => encerramentoAtivo = val),
+                              ),
+                            ],
+                          ),
+                          if (encerramentoAtivo) ...[
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: horarioEncerramentoCtrl,
+                              decoration: InputDecoration(
+                                labelText: "Horário Encerramento",
+                                hintText: "20:00",
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(Icons.lock_clock, size: 20),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Médiuns Participantes
+                    Text("Médiuns Participantes",
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.brown[700]),
+                    ),
+                    const SizedBox(height: 8),
+                    if (activeMediums.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text("Nenhum médium ativo.", style: TextStyle(color: Colors.grey)),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: activeMediums.map((m) {
+                            final isSelected = mediumsSelected[m.id] ?? false;
+                            final linhas = m.entidades.map((e) => e.linha).toSet().join(', ');
+                            return CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              title: Text(m.nome, style: const TextStyle(fontSize: 14)),
+                              subtitle: Text(linhas, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                              value: isSelected,
+                              activeColor: Colors.brown,
+                              onChanged: (val) {
+                                setDialogState(() => mediumsSelected[m.id] = val ?? false);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                    
+                    // Botão Sincronizar com Kiosk
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.sync, color: Colors.blue),
+                      label: const Text("Sincronizar com Kiosk", style: TextStyle(color: Colors.blue)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.blue),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        // Atualizar participantes e presenças imediatamente
+                        final participantes = mediumsSelected.entries
+                          .where((e) => e.value)
+                          .map((e) => e.key)
+                          .toList();
+                        final presencas = <String, bool>{};
+                        for (var id in participantes) {
+                          presencas[id] = true;
+                        }
+                        try {
+                          final updatedGira = Gira(
+                            id: gira.id,
+                            terreiroId: gira.terreiroId,
+                            data: gira.data,
+                            tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
+                            linha: selectedLinha,
+                            status: selectedStatus,
+                            horarioInicio: horarioInicioCtrl.text,
+                            horarioKiosk: horarioKioskCtrl.text,
+                            horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
+                            encerramentoKioskAtivo: encerramentoAtivo,
+                            mediumsParticipantes: participantes,
+                            presencas: presencas,
+                          );
+                          await ref.read(adminRepositoryProvider).updateGira(updatedGira);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(content: Text('Kiosk sincronizado!'), backgroundColor: Colors.blue, duration: Duration(seconds: 2)),
                             );
                           }
-                        },
-                        child: const Text('EXCLUIR'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("CANCELAR"),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.save),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
-              onPressed: () async {
-                final updatedGira = Gira(
-                  id: gira.id,
-                  terreiroId: gira.terreiroId,
-                  data: gira.data,
-                  tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
-                  linha: selectedLinha,
-                  status: selectedStatus,
-                  presencas: gira.presencas,
-                );
-                try {
-                  await ref.read(adminRepositoryProvider).updateGira(updatedGira);
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Gira atualizada!'), backgroundColor: Colors.green),
-                    );
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                    );
-                  }
-                }
-              },
-              label: const Text("SALVAR"),
             ),
-          ],
-        ),
+            actions: [
+              // Botão excluir
+              TextButton.icon(
+                icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+                label: const Text("EXCLUIR", style: TextStyle(color: Colors.red)),
+                onPressed: () {
+                  showDialog(
+                    context: ctx,
+                    builder: (confirmCtx) => AlertDialog(
+                      title: const Text('Confirmar exclusão'),
+                      content: Text('Deseja excluir a gira "${gira.tema}"?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(confirmCtx), child: const Text('CANCELAR')),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                          onPressed: () async {
+                            await ref.read(adminRepositoryProvider).deleteGira(gira.id);
+                            if (confirmCtx.mounted) Navigator.pop(confirmCtx);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Gira excluída'), backgroundColor: Colors.orange),
+                              );
+                            }
+                          },
+                          child: const Text('EXCLUIR'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("CANCELAR"),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.save),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  final participantes = mediumsSelected.entries
+                    .where((e) => e.value)
+                    .map((e) => e.key)
+                    .toList();
+                  final presencas = <String, bool>{};
+                  for (var id in participantes) {
+                    presencas[id] = gira.presencas[id] ?? true;
+                  }
+                  
+                  final updatedGira = Gira(
+                    id: gira.id,
+                    terreiroId: gira.terreiroId,
+                    data: gira.data,
+                    tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
+                    linha: selectedLinha,
+                    status: selectedStatus,
+                    horarioInicio: horarioInicioCtrl.text,
+                    horarioKiosk: horarioKioskCtrl.text,
+                    horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
+                    encerramentoKioskAtivo: encerramentoAtivo,
+                    mediumsParticipantes: participantes,
+                    presencas: presencas,
+                  );
+                  try {
+                    await ref.read(adminRepositoryProvider).updateGira(updatedGira);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Gira atualizada!'), backgroundColor: Colors.green),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                },
+                label: const Text("SALVAR"),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

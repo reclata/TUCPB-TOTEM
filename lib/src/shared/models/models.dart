@@ -22,11 +22,16 @@ class TimestampConverter implements JsonConverter<DateTime, Object> {
 class Gira {
   final String id;
   final String terreiroId;
-  final String linha; // e.g., Caboclos, Pretos Velhos, Baianos
-  final String tema; // e.g., Caboclo (optional description)
+  final String linha;
+  final String tema;
   @TimestampConverter()
   final DateTime data;
   final String status; // aberta, encerrada, agendada
+  final String horarioInicio; // e.g. "19:00"
+  final String horarioKiosk; // horário de liberação do kiosk
+  final String? horarioEncerramentoKiosk; // horário encerramento (opcional)
+  final bool encerramentoKioskAtivo; // flag para ativar encerramento automático
+  final List<String> mediumsParticipantes; // IDs dos médiuns participantes
 
   final Map<String, bool> presencas; // mediumId -> presente (true/false)
 
@@ -37,6 +42,11 @@ class Gira {
     required this.tema,
     required this.data,
     required this.status,
+    this.horarioInicio = '',
+    this.horarioKiosk = '',
+    this.horarioEncerramentoKiosk,
+    this.encerramentoKioskAtivo = false,
+    this.mediumsParticipantes = const [],
     this.presencas = const {},
   });
 

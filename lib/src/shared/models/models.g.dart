@@ -13,7 +13,17 @@ Gira _$GiraFromJson(Map<String, dynamic> json) => Gira(
   tema: json['tema'] as String,
   data: const TimestampConverter().fromJson(json['data'] as Object),
   status: json['status'] as String,
-  presencas: (json['presencas'] as Map<String, dynamic>?)?.map(
+  horarioInicio: json['horarioInicio'] as String? ?? '',
+  horarioKiosk: json['horarioKiosk'] as String? ?? '',
+  horarioEncerramentoKiosk: json['horarioEncerramentoKiosk'] as String?,
+  encerramentoKioskAtivo: json['encerramentoKioskAtivo'] as bool? ?? false,
+  mediumsParticipantes:
+      (json['mediumsParticipantes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  presencas:
+      (json['presencas'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as bool),
       ) ??
       const {},
@@ -26,6 +36,11 @@ Map<String, dynamic> _$GiraToJson(Gira instance) => <String, dynamic>{
   'tema': instance.tema,
   'data': const TimestampConverter().toJson(instance.data),
   'status': instance.status,
+  'horarioInicio': instance.horarioInicio,
+  'horarioKiosk': instance.horarioKiosk,
+  'horarioEncerramentoKiosk': instance.horarioEncerramentoKiosk,
+  'encerramentoKioskAtivo': instance.encerramentoKioskAtivo,
+  'mediumsParticipantes': instance.mediumsParticipantes,
   'presencas': instance.presencas,
 };
 
@@ -74,7 +89,8 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
           .toList() ??
       const [],
   girasParticipadas: (json['girasParticipadas'] as num?)?.toInt() ?? 0,
-  atendimentosRealizados: (json['atendimentosRealizados'] as num?)?.toInt() ?? 0,
+  atendimentosRealizados:
+      (json['atendimentosRealizados'] as num?)?.toInt() ?? 0,
   faltas: (json['faltas'] as num?)?.toInt() ?? 0,
 );
 
