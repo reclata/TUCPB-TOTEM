@@ -120,7 +120,9 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
           ),
         ),
         const SizedBox(height: 40),
-        Image.asset('assets/images/logo.png', height: 450),
+        ClipOval(
+          child: Image.asset('assets/images/logo.png', height: 450),
+        ),
         const SizedBox(height: 60),
         ElevatedButton(
           onPressed: () {
@@ -154,7 +156,9 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset('assets/images/logo.png', height: 120),
+        ClipOval(
+          child: Image.asset('assets/images/logo.png', height: 120),
+        ),
         const SizedBox(height: 20),
         Text("T.U.C.P.B.", style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white)),
         Text("Token System", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white70, letterSpacing: 2)),

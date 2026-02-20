@@ -87,11 +87,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 80,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.temple_buddhist, size: 60, color: Colors.white),
+                      ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          height: 80,
+                          width: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.temple_buddhist, size: 60, color: Colors.white),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
