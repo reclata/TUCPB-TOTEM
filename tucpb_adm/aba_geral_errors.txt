@@ -1,0 +1,45 @@
+﻿
+analysis_full.txt:191:  error - The named parameter 'data' is 
+required, but there's no corresponding argument - lib\src\feat
+ures\admin\presentation\financeiro\tabs\aba_geral_financeiro.d
+art:14:45 - missing_required_argument
+analysis_full.txt:192:  error - The named parameter 'error' 
+is required, but there's no corresponding argument - lib\src\f
+eatures\admin\presentation\financeiro\tabs\aba_geral_financeir
+o.dart:14:45 - missing_required_argument
+analysis_full.txt:193:  error - The named parameter 'loading' 
+is required, but there's no corresponding argument - lib\src\f
+eatures\admin\presentation\financeiro\tabs\aba_geral_financeir
+o.dart:14:45 - missing_required_argument
+analysis_full.txt:194:  error - Too many positional 
+arguments: 0 expected, but 1 found - lib\src\features\admin\pr
+esentation\financeiro\tabs\aba_geral_financeiro.dart:14:49 - 
+extra_positional_arguments_could_be_named
+analysis_full.txt:195:   info - 'value' is deprecated and 
+shouldn't be used. Use initialValue instead. This will set 
+the initial value for the form field. This feature was 
+deprecated after v3.33.0-1.0.pre - lib\src\features\admin\pres
+entation\financeiro\tabs\aba_geral_financeiro.dart:102:19 - 
+deprecated_member_use
+analysis_full.txt:196:   info - 'withOpacity' is deprecated 
+and shouldn't be used. Use .withValues() to avoid precision 
+loss - lib\src\features\admin\presentation\financeiro\tabs\aba
+_geral_financeiro.dart:144:63 - deprecated_member_use
+analysis_full.txt:197:   info - Use 'const' with the 
+constructor to improve performance - lib\src\features\admin\pr
+esentation\financeiro\tabs\aba_geral_financeiro.dart:151:37 - 
+prefer_const_constructors
+analysis_full.txt:198:   info - 'withOpacity' is deprecated 
+and shouldn't be used. Use .withValues() to avoid precision 
+loss - lib\src\features\admin\presentation\financeiro\tabs\aba
+_geral_financeiro.dart:261:22 - deprecated_member_use
+analysis_full.txt:199:   info - 'withOpacity' is deprecated 
+and shouldn't be used. Use .withValues() to avoid precision 
+loss - lib\src\features\admin\presentation\financeiro\tabs\aba
+_geral_financeiro.dart:263:41 - deprecated_member_use
+analysis_full.txt:200:   info - 'withOpacity' is deprecated 
+and shouldn't be used. Use .withValues() to avoid precision 
+loss - lib\src\features\admin\presentation\financeiro\tabs\aba
+_geral_financeiro.dart:277:69 - deprecated_member_use
+
+

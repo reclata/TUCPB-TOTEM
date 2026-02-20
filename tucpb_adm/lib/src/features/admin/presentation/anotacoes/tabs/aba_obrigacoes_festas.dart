@@ -241,7 +241,7 @@ class _FormObrigacaoModalState extends ConsumerState<_FormObrigacaoModal> {
                           Expanded(
                             child: TextFormField(
                               controller: _valorController,
-                              decoration: const InputDecoration(labelText: "Valor Total (R$)", border: OutlineInputBorder(), prefixIcon: Icon(Icons.attach_money)),
+                              decoration: InputDecoration(labelText: "Valor Total (R\$)", border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.attach_money)),
                               keyboardType: TextInputType.number,
                               onChanged: (_) => setState(() => _atualizarParcelas()),
                             ),
@@ -341,7 +341,7 @@ class _FormObrigacaoModalState extends ConsumerState<_FormObrigacaoModal> {
             Expanded(
               child: TextFormField(
                 controller: _custoErvaController,
-                decoration: const InputDecoration(labelText: "Custo de Ervas por Médium (R$)", border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: "Custo de Ervas por Médium (R\$)", border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
               ),
             ),

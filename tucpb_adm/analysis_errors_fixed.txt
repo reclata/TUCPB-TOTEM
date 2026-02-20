@@ -1,0 +1,31 @@
+﻿
+analysis_full.txt:67:  error - Expected an identifier - lib\sr
+c\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_fe
+stas.dart:244:92 - missing_identifier
+analysis_full.txt:68:  error - Invalid constant value - lib\sr
+c\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_fe
+stas.dart:244:92 - invalid_constant
+analysis_full.txt:72:  error - Expected an identifier - lib\sr
+c\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_fe
+stas.dart:344:92 - missing_identifier
+analysis_full.txt:73:  error - Invalid constant value - lib\sr
+c\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_fe
+stas.dart:344:92 - invalid_constant
+analysis_full.txt:191:  error - The named parameter 'data' is 
+required, but there's no corresponding argument - lib\src\feat
+ures\admin\presentation\financeiro\tabs\aba_geral_financeiro.d
+art:14:45 - missing_required_argument
+analysis_full.txt:192:  error - The named parameter 'error' 
+is required, but there's no corresponding argument - lib\src\f
+eatures\admin\presentation\financeiro\tabs\aba_geral_financeir
+o.dart:14:45 - missing_required_argument
+analysis_full.txt:193:  error - The named parameter 'loading' 
+is required, but there's no corresponding argument - lib\src\f
+eatures\admin\presentation\financeiro\tabs\aba_geral_financeir
+o.dart:14:45 - missing_required_argument
+analysis_full.txt:194:  error - Too many positional 
+arguments: 0 expected, but 1 found - lib\src\features\admin\pr
+esentation\financeiro\tabs\aba_geral_financeiro.dart:14:49 - 
+extra_positional_arguments_could_be_named
+
+

@@ -11,7 +11,7 @@ import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 
 final _totaisProvider = StreamProvider<Map<String, double>>((ref) {
-  return ref.watch(cobrancasStreamProvider).map((lista) {
+  return ref.watch(cobrancasStreamProvider.stream).map((lista) {
     double totalPago = 0;
     double totalAvulso = 0;
     double totalAsaas = 0;

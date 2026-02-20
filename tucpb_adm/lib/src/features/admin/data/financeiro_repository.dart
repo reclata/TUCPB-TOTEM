@@ -131,4 +131,12 @@ class FinanceiroRepository {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('asaas_api_key');
   }
+
+  Stream<List<CobrancaModel>> streamCobrancasUsuario(String userId) {
+    return _db
+        .collection(_collection)
+        .where('mediumId', isEqualTo: userId)
+        .snapshots()
+        .map((s) => s.docs.map(CobrancaModel.fromFirestore).toList());
+  }
 }
