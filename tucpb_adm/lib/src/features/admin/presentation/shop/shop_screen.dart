@@ -1,8 +1,7 @@
-import 'dart:ui_web' as ui;
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -15,25 +14,11 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   final String shopifyUrl = "https://tucpb.myshopify.com"; 
 
-  @override
-  void initState() {
-    super.initState();
-    // Register the iframe element
-    // ignore: undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory(
-      'shopify-frame',
-      (int viewId) => html.IFrameElement()
-        ..src = shopifyUrl
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..onLoad.listen((event) {
-          debugPrint('Shopify loaded');
-        })
-        ..onError.listen((event) {
-          debugPrint('Shopify error');
-        }),
-    );
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   @override
@@ -59,7 +44,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
-                  onPressed: () => html.window.open(shopifyUrl, '_blank'),
+                  onPressed: () => _openExternalUrl(shopifyUrl),
                   icon: const Icon(Icons.open_in_new, size: 16),
                   label: const Text('Abrir Loja'),
                   style: ElevatedButton.styleFrom(
@@ -119,7 +104,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                   subtitle: 'Visão do cliente',
                                   icon: Icons.storefront,
                                   color: const Color(0xFF95BF47),
-                                  onTap: () => html.window.open(shopifyUrl, '_blank'),
+                                  onTap: () => _openExternalUrl(shopifyUrl),
                                 ),
                                 const SizedBox(width: 24),
                                 _BigActionButton(
@@ -127,7 +112,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                   subtitle: 'Gestão de pedidos',
                                   icon: Icons.dashboard_customize,
                                   color: Colors.indigo,
-                                  onTap: () => html.window.open('https://admin.shopify.com', '_blank'),
+                                  onTap: () => _openExternalUrl('https://admin.shopify.com'),
                                 ),
                               ],
                             ),

@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:tucpb_adm/src/shared/utils/html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart' hide Border, BorderStyle;

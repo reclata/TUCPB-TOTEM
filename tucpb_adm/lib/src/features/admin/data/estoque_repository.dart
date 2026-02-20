@@ -71,9 +71,12 @@ class EstoqueRepository {
     return _db
         .collection(_checklistManual)
         .where('comprado', isEqualTo: false)
-        .orderBy('dataCriacao', descending: true)
         .snapshots()
-        .map((s) => s.docs.map(ChecklistManualItem.fromFirestore).toList());
+        .map((s) {
+          final items = s.docs.map(ChecklistManualItem.fromFirestore).toList();
+          items.sort((a, b) => (b.dataCriacao ?? DateTime(0)).compareTo(a.dataCriacao ?? DateTime(0)));
+          return items;
+        });
   }
 
   /// Retorna um Map com itens de estoque e itens manuais que precisam ser comprados

@@ -5,11 +5,39 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:tucpb_adm/src/features/admin/data/cobranca_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/financeiro_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/log_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 
-final _totaisProvider = FutureProvider<Map<String, double>>((ref) {
-  return ref.watch(financeiroRepositoryProvider).calcularTotais();
+final _totaisProvider = StreamProvider<Map<String, double>>((ref) {
+  return ref.watch(cobrancasStreamProvider).map((lista) {
+    double totalPago = 0;
+    double totalAvulso = 0;
+    double totalAsaas = 0;
+    double totalPendente = 0;
+    double totalAtrasado = 0;
+
+    for (final c in lista) {
+      if (c.status == StatusCobranca.pago) {
+        totalPago += c.valor;
+        if (c.origem == OrigemCobranca.avulso) totalAvulso += c.valor;
+        if (c.origem == OrigemCobranca.asaas) totalAsaas += c.valor;
+      } else if (c.status == StatusCobranca.atrasado) {
+        totalAtrasado += c.valor;
+      } else {
+        totalPendente += c.valor;
+      }
+    }
+
+    return {
+      'totalPago': totalPago,
+      'totalAvulso': totalAvulso,
+      'totalAsaas': totalAsaas,
+      'totalPendente': totalPendente,
+      'totalAtrasado': totalAtrasado,
+    };
+  });
 });
 
 class AbaGeral extends ConsumerStatefulWidget {
@@ -423,6 +451,16 @@ class _TabelaLinha extends ConsumerWidget {
     if (confirmar == true) {
       await refW.read(financeiroRepositoryProvider).atualizarStatus(
         c.id, StatusCobranca.pago, dataPagamento: DateTime.now(),
+      );
+
+      // Log
+      final currentUser = refW.read(userDataProvider).asData?.value;
+      await refW.read(logRepositoryProvider).logAction(
+        userId: currentUser?['uid'] ?? '',
+        userName: currentUser?['nome'] ?? 'Portal Admin',
+        module: 'Financeiro',
+        action: LogActionType.update,
+        description: 'Registrou pagamento de ${fmt.format(c.valor)} para ${c.usuarioNome}',
       );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

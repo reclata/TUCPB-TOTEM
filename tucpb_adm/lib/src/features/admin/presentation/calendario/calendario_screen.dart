@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:tucpb_adm/src/features/admin/data/gira_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/giras_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/log_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
+import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/calendario/nova_gira_modal.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/calendario/gira_detalhes_modal.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
@@ -316,10 +319,10 @@ class _KanbanView extends ConsumerStatefulWidget {
 }
 
 class _KanbanViewState extends ConsumerState<_KanbanView> {
-  // Mostrar 6 meses: 2 anteriores + atual + 3 futuros
-  final List<DateTime> _meses = List.generate(6, (i) {
+  // Mostrar 18 meses: 6 anteriores + atual + 11 futuros
+  final List<DateTime> _meses = List.generate(18, (i) {
     final now = DateTime.now();
-    return DateTime(now.year, now.month - 2 + i, 1);
+    return DateTime(now.year, now.month - 6 + i, 1);
   });
 
   @override
@@ -330,22 +333,26 @@ class _KanbanViewState extends ConsumerState<_KanbanView> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Erro: $e')),
       data: (giras) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: _meses.map((mes) {
-              final girasDoMes = giras.where((g) =>
-                  g.data.year == mes.year && g.data.month == mes.month).toList();
-              final isAtual = mes.year == DateTime.now().year && mes.month == DateTime.now().month;
-
-              return _KanbanColumn(
-                mes: mes,
-                giras: girasDoMes,
-                isAtual: isAtual,
-              );
-            }).toList(),
+        return Scrollbar(
+          thumbVisibility: true,
+          thickness: 8,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 16, top: 16, left: 16, right: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _meses.map((mes) {
+                final girasDoMes = giras.where((g) =>
+                    g.data.year == mes.year && g.data.month == mes.month).toList();
+                final isAtual = mes.year == DateTime.now().year && mes.month == DateTime.now().month;
+        
+                return _KanbanColumn(
+                  mes: mes,
+                  giras: girasDoMes,
+                  isAtual: isAtual,
+                );
+              }).toList(),
+            ),
           ),
         );
       },
@@ -492,6 +499,11 @@ class _KanbanCard extends ConsumerWidget {
                               ),
                               child: const Icon(Icons.edit, size: 14, color: Colors.grey),
                             ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _confirmarExclusao(context, ref),
+                            child: const Icon(Icons.delete_outline, size: 14, color: Colors.red),
+                          ),
                         ],
                       ),
                     ],
@@ -532,6 +544,42 @@ class _KanbanCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarExclusao(BuildContext context, WidgetRef ref) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir Gira"),
+        content: Text("Deseja realmente excluir '${gira.nome}'?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Excluir"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await ref.read(girasRepositoryProvider).deletarGira(gira.id);
+      
+      // Log
+      final currentUser = ref.read(userDataProvider).asData?.value;
+      await ref.read(logRepositoryProvider).logAction(
+        userId: currentUser?['uid'] ?? '',
+        userName: currentUser?['nome'] ?? 'Portal Admin',
+        module: 'Calendário',
+        action: LogActionType.delete,
+        description: 'Excluiu a gira: ${gira.nome} (${DateFormat('dd/MM').format(gira.data)})',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gira excluída.")));
+      }
+    }
   }
 
   Color _corHex(String hex) {
@@ -602,10 +650,50 @@ class _GiraCard extends ConsumerWidget {
                   builder: (_) => NovaGiraModal(giraParaEditar: gira),
                 ),
               ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+              onPressed: () => _confirmarExclusao(context, ref),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarExclusao(BuildContext context, WidgetRef ref) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir Gira"),
+        content: Text("Deseja realmente excluir '${gira.nome}'?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Excluir"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await ref.read(girasRepositoryProvider).deletarGira(gira.id);
+
+      // Log
+      final currentUser = ref.read(userDataProvider).asData?.value;
+      await ref.read(logRepositoryProvider).logAction(
+        userId: currentUser?['uid'] ?? '',
+        userName: currentUser?['nome'] ?? 'Portal Admin',
+        module: 'Calendário',
+        action: LogActionType.delete,
+        description: 'Excluiu a gira (lista): ${gira.nome}',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gira excluída.")));
+      }
+    }
   }
 
   Color _corHex(String hex) {

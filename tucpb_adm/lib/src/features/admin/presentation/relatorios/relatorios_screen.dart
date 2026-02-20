@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ enum TipoRelatorio {
   baixasEstoque,
   contagemEstoque,
   senhasGeradas,
+  movimentacao,
 }
 
 extension TipoRelatorioExt on TipoRelatorio {
@@ -26,6 +28,7 @@ extension TipoRelatorioExt on TipoRelatorio {
       case TipoRelatorio.baixasEstoque: return 'Baixas de Estoque';
       case TipoRelatorio.contagemEstoque: return 'Contagem de Estoque';
       case TipoRelatorio.senhasGeradas: return 'Total de Senhas';
+      case TipoRelatorio.movimentacao: return 'Movimentação do Sistema';
     }
   }
 
@@ -39,6 +42,7 @@ extension TipoRelatorioExt on TipoRelatorio {
       case TipoRelatorio.baixasEstoque: return FontAwesomeIcons.boxOpen;
       case TipoRelatorio.contagemEstoque: return FontAwesomeIcons.calculator;
       case TipoRelatorio.senhasGeradas: return FontAwesomeIcons.ticket;
+      case TipoRelatorio.movimentacao: return FontAwesomeIcons.clockRotateLeft;
     }
   }
 
@@ -52,6 +56,7 @@ extension TipoRelatorioExt on TipoRelatorio {
       case TipoRelatorio.baixasEstoque: return 'Relatório de consumo e saídas de materiais.';
       case TipoRelatorio.contagemEstoque: return 'Diferenças encontradas entre o sistema e o físico.';
       case TipoRelatorio.senhasGeradas: return 'Análise de atendimento por período e por gira.';
+      case TipoRelatorio.movimentacao: return 'Log de auditoria: histórico de inclusões e exclusões de dados.';
     }
   }
 }
@@ -134,7 +139,13 @@ class _RelatoriosScreenState extends State<RelatoriosScreen> {
                   final tipo = TipoRelatorio.values[index];
                   return _RelatorioCard(
                     tipo: tipo,
-                    onTap: () => setState(() => _relatorioSelecionado = tipo),
+                    onTap: () {
+                      if (tipo == TipoRelatorio.movimentacao) {
+                        GoRouter.of(context).push('/relatorios/movimentacao');
+                      } else {
+                        setState(() => _relatorioSelecionado = tipo);
+                      }
+                    },
                   );
                 },
               ),

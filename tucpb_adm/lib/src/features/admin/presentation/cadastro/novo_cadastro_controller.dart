@@ -205,6 +205,105 @@ class CadastroFormData extends ChangeNotifier {
       'dataCriacao': FieldValue.serverTimestamp(),
     };
   }
+
+  void fromMap(Map<String, dynamic> map) {
+    nomeController.text = map['nome'] ?? '';
+    emailController.text = map['email'] ?? '';
+    telefoneController.text = map['telefone'] ?? '';
+    perfilAcesso = map['perfil'] ?? 'Medium';
+    ativo = map['ativo'] ?? true;
+    fotoUrl = map['fotoUrl'];
+    observacaoController.text = map['observacao'] ?? '';
+
+    final dp = map['dadosPessoais'] as Map<String, dynamic>?;
+    if (dp != null) {
+      dtNascimentoController.text = dp['dtNascimento'] ?? '';
+      cpfController.text = dp['cpf'] ?? '';
+      estadoCivil = dp['estadoCivil'] ?? 'Solteiro';
+      final filhos = dp['filhos'] as List<dynamic>?;
+      if (filhos != null && filhos.isNotEmpty) {
+        temFilhos = true;
+        qtdFilhos = filhos.length;
+        _adjustFilhosCount(qtdFilhos);
+        for (int i = 0; i < filhos.length; i++) {
+          nomesFilhosControllers[i].text = filhos[i];
+        }
+      }
+      final end = dp['endereco'] as Map<String, dynamic>?;
+      if (end != null) {
+        cepController.text = end['cep'] ?? '';
+        ruaController.text = end['rua'] ?? '';
+        numeroController.text = end['numero'] ?? '';
+        bairroController.text = end['bairro'] ?? '';
+        cidadeController.text = end['cidade'] ?? '';
+      }
+      restricaoSaude = dp['restricoes'] != null;
+      qualRestricaoController.text = dp['restricoes'] ?? '';
+      alergias = dp['alergias'] != null;
+      quaisAlergiasController.text = dp['alergias'] ?? '';
+      final em = dp['emergencia'] as Map<String, dynamic>?;
+      if (em != null) {
+        contatoEmergenciaNome.text = em['nome'] ?? '';
+        contatoEmergenciaParentesco.text = em['parentesco'] ?? '';
+        contatoEmergenciaTel.text = em['telefone'] ?? '';
+      }
+    }
+
+    final ui = map['usoImagem'] as Map<String, dynamic>?;
+    if (ui != null) {
+      ui.forEach((k, v) => usoImagem[k] = v);
+    }
+
+    final esp = map['espiritual'] as Map<String, dynamic>?;
+    if (esp != null) {
+      paisCabecaPai.clear();
+      paisCabecaPai.addAll(List<String>.from(esp['pais'] ?? []));
+      paisCabecaMae.clear();
+      paisCabecaMae.addAll(List<String>.from(esp['maes'] ?? []));
+      entradaTerreiroController.text = esp['entrada'] ?? '';
+      
+      obrigacoes.clear();
+      final obs = esp['obrigacoes'] as List<dynamic>?;
+      if (obs != null) {
+        for (final o in obs) {
+          final item = ObrigacaoItem();
+          item.tipo = o['tipo'] ?? 'Macifi';
+          item.dataController.text = o['data'] ?? '';
+          obrigacoes.add(item);
+        }
+      }
+
+      batizadoCatolica = esp['batizadoCatolica'] ?? false;
+      final bt = esp['batizadoTucpb'] as Map<String, dynamic>?;
+      if (bt != null) {
+        batizadoTucpb = true;
+        dataBatismoController.text = bt['data'] ?? '';
+        padrinhoBatismoController.text = bt['padrinho'] ?? '';
+        madrinhaBatismoController.text = bt['madrinha'] ?? '';
+      }
+      final ct = esp['crismadoTucpb'] as Map<String, dynamic>?;
+      if (ct != null) {
+        crismadoTucpb = true;
+        dataCrismaController.text = ct['data'] ?? '';
+        padrinhoCrismaController.text = ct['padrinho'] ?? '';
+        madrinhaCrismaController.text = ct['madrinha'] ?? '';
+      }
+    }
+
+    final ents = map['ententities'] as List<dynamic>? ?? map['entidades'] as List<dynamic>?;
+    if (ents != null) {
+      entidades.clear();
+      for (final e in ents) {
+        final item = EntidadeItem();
+        item.linha = e['linha'] ?? 'CABOCLO';
+        item.tipo = e['tipo'] ?? 'CABOCLO';
+        item.nomeController.text = e['nome'] ?? '';
+        entidades.add(item);
+      }
+    }
+
+    notifyListeners();
+  }
   
   @override
   void dispose() {

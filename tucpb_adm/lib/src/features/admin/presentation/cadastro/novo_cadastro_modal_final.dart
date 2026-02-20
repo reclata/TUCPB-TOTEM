@@ -8,11 +8,16 @@ import 'package:tucpb_adm/src/features/admin/presentation/cadastro/tabs/aba_espi
 import 'package:tucpb_adm/src/features/admin/presentation/cadastro/tabs/aba_imagem.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/cadastro/tabs/aba_perfil.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/cadastro/tabs/aba_pessoal_v2.dart';
-import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
+import 'package:tucpb_adm/src/features/admin/presentation/cadastro/tabs/aba_historico.dart';
+import 'package:tucpb_adm/src/features/admin/data/log_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
+import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 
 class NovoCadastroModalFinal extends ConsumerStatefulWidget {
-  const NovoCadastroModalFinal({super.key});
+  final String? docId;
+  final Map<String, dynamic>? initialData;
+  const NovoCadastroModalFinal({super.key, this.docId, this.initialData});
 
   @override
   ConsumerState<NovoCadastroModalFinal> createState() => _NovoCadastroModalFinalState();
@@ -27,7 +32,10 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
+    if (widget.initialData != null) {
+      _formData.fromMap(widget.initialData!);
+    }
   }
 
   @override
@@ -46,7 +54,21 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
     setState(() => _isSaving = true);
     try {
       final map = _formData.toMap();
-      await FirebaseFirestore.instance.collection('usuarios').add(map);
+      if (widget.docId == null) {
+        await FirebaseFirestore.instance.collection('usuarios').add(map);
+      } else {
+        await FirebaseFirestore.instance.collection('usuarios').doc(widget.docId).update(map);
+      }
+
+      // Log
+      final currentUser = ref.read(userDataProvider).asData?.value;
+      await ref.read(logRepositoryProvider).logAction(
+        userId: currentUser?['uid'] ?? '',
+        userName: currentUser?['nome'] ?? 'Portal Admin',
+        module: 'Cadastros',
+        action: widget.docId == null ? LogActionType.create : LogActionType.update,
+        description: '${widget.docId == null ? 'Cadastrou' : 'Editou'} usuário: ${map['nome']}',
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -136,6 +158,7 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
                         Tab(text: "Uso de Imagem"),
                         Tab(text: "Espiritual"),
                         Tab(text: "Entidades"),
+                        Tab(text: "Histórico"),
                       ],
                     );
                   },
@@ -154,6 +177,7 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
                       _buildTabSafe(const AbaImagem()),
                       _buildTabSafe(const AbaEspiritualTab()),
                       _buildTabSafe(const AbaEntidades()),
+                      _buildTabSafe(AbaHistorico(userId: widget.docId)),
                     ],
                   ),
                 ),

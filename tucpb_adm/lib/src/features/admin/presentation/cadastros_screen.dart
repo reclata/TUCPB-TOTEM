@@ -7,7 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/widgets/novo_cadastro_dialog.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/cadastro/novo_cadastro_modal_final.dart';
+import 'package:tucpb_adm/src/features/admin/data/log_repository.dart';
+import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
+import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
+import 'package:go_router/go_router.dart';
 
 class CadastrosScreen extends ConsumerStatefulWidget {
   const CadastrosScreen({super.key});
@@ -33,6 +37,75 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
       context: context,
       builder: (context) => const NovoCadastroModalFinal(),
     );
+  }
+
+  void _viewDetails(Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(data['nome'] ?? 'Detalhes'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: data.entries.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text("${e.key}: ${e.value}"),
+            )).toList(),
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Fechar"))],
+      ),
+    );
+  }
+
+  void _editUser(String id, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => NovoCadastroModalFinal(docId: id, initialData: data),
+    );
+  }
+
+  Future<void> _deleteUser(String id, String nome) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirmar Exclusão"),
+        content: Text("Deseja realmente excluir o cadastro de $nome? Esta ação não pode ser desfeita."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Excluir"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      try {
+        await FirebaseFirestore.instance.collection('usuarios').doc(id).delete();
+        
+        // Log
+        final currentUser = ref.read(userDataProvider).asData?.value;
+        await ref.read(logRepositoryProvider).logAction(
+          userId: currentUser?['uid'] ?? '',
+          userName: currentUser?['nome'] ?? 'Portal Admin',
+          module: 'Cadastros',
+          action: LogActionType.delete,
+          description: 'Excluiu o usuário: $nome',
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cadastro excluído.")));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao excluir: $e"), backgroundColor: Colors.red));
+        }
+      }
+    }
   }
 
   @override
@@ -218,11 +291,26 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                           ),
                           DataCell(Row(
                             children: [
-                              IconButton(icon: const Icon(Icons.visibility, size: 20, color: Colors.blue), onPressed: () {}, tooltip: "Visualizar"),
-                              IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.orange), onPressed: () {}, tooltip: "Editar"),
-                              IconButton(icon: const Icon(FontAwesomeIcons.brazilianRealSign, size: 18, color: Colors.green), onPressed: () {}, tooltip: "Financeiro"),
-                              IconButton(icon: const Icon(FontAwesomeIcons.fileLines, size: 18, color: Colors.brown), onPressed: () {}, tooltip: "Relatórios"),
-                              IconButton(icon: const Icon(FontAwesomeIcons.clipboardCheck, size: 18, color: Colors.purple), onPressed: () {}, tooltip: "Obrigações"),
+                              IconButton(
+                                icon: const Icon(Icons.visibility, size: 20, color: Colors.blue), 
+                                onPressed: () => _viewDetails(data), 
+                                tooltip: "Visualizar"
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20, color: Colors.orange), 
+                                onPressed: () => _editUser(doc.id, data), 
+                                tooltip: "Editar"
+                              ),
+                              IconButton(
+                                icon: const Icon(FontAwesomeIcons.brazilianRealSign, size: 18, color: Colors.green), 
+                                onPressed: () => context.go('/financeiro'), 
+                                tooltip: "Financeiro"
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20, color: Colors.red), 
+                                onPressed: () => _deleteUser(doc.id, nome), 
+                                tooltip: "Excluir"
+                              ),
                             ],
                           )),
                         ]);

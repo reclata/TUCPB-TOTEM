@@ -13,6 +13,7 @@ import 'package:tucpb_adm/src/features/admin/presentation/estoque/estoque_screen
 import 'package:tucpb_adm/src/features/admin/presentation/news/news_screen.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/shop/shop_screen.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/relatorios/relatorios_screen.dart';
+import 'package:tucpb_adm/src/features/admin/presentation/relatorios/movimentacao_screen.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/album/album_screen.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/anotacoes/anotacoes_screen.dart';
 import 'package:tucpb_adm/src/features/admin/presentation/lembretes_screen.dart';
@@ -94,6 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/relatorios',
             builder: (context, state) => const RelatoriosScreen(),
+          ),
+          GoRoute(
+            path: '/relatorios/movimentacao',
+            builder: (context, state) => const MovimentacaoScreen(),
           ),
           GoRoute(
             path: '/album',

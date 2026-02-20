@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'package:tucpb_adm/src/features/admin/data/gira_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/giras_repository.dart';
+import 'package:tucpb_adm/src/features/admin/presentation/anotacoes/tabs/aba_obrigacoes_festas.dart';
 
 class AnotacoesScreen extends ConsumerStatefulWidget {
   const AnotacoesScreen({super.key});
@@ -51,100 +52,135 @@ class _AnotacoesScreenState extends ConsumerState<AnotacoesScreen> {
 
           final perfil = (userData?['perfil'] ?? '').toString().toLowerCase();
           final isAssistencia = perfil.contains('assistencia') || perfil == 'público' || perfil == 'visitante';
+          final isPritvileged = ['admin', 'suporte', 'administrador', 'dirigente'].contains(perfil);
 
           if (isAssistencia) {
              return _AssistenciaAnotacoesView(userId: userId);
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Minhas Anotações & Fundamentos",
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AdminTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Registre os detalhes de cada linha de trabalho para seu desenvolvimento",
-                  style: GoogleFonts.outfit(fontSize: 16, color: AdminTheme.textSecondary),
-                ),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Sidebar de Linhas
-                      Container(
-                        width: 300,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: _giras.entries.map((gira) {
-                            return ExpansionTile(
-                              title: Text(
-                                gira.key,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: AdminTheme.textPrimary,
-                                ),
-                              ),
-                              initiallyExpanded: gira.value.contains(_selectedLinha),
-                              children: gira.value.map((linha) {
-                                final isSelected = _selectedLinha == linha;
-                                return ListTile(
-                                  selected: isSelected,
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.only(left: 32, right: 16),
-                                  selectedTileColor: AdminTheme.primary.withOpacity(0.05),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  title: Text(
-                                    linha,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 13,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: isSelected ? AdminTheme.primary : AdminTheme.textPrimary,
-                                    ),
-                                  ),
-                                  onTap: () => setState(() => _selectedLinha = linha),
-                                );
-                              }).toList(),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(width: 32),
-                      // Área de Conteúdo
-                      Expanded(
-                        child: _selectedLinha == null
-                            ? const Center(child: Text("Selecione uma linha para ver as anotações"))
-                            : _LinhaAnotacoesContent(userId: userId, linha: _selectedLinha!),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
+          if (isPritvileged) {
+             return DefaultTabController(
+               length: 2,
+               child: Column(
+                 children: [
+                   Container(
+                     color: Colors.white,
+                     child: TabBar(
+                       labelColor: AdminTheme.primary,
+                       unselectedLabelColor: Colors.grey,
+                       indicatorColor: AdminTheme.primary,
+                       tabs: const [
+                         Tab(text: "OBRIGAÇÕES E FESTAS"),
+                         Tab(text: "ENTREGAS E GIRAS"),
+                       ],
+                     ),
+                   ),
+                   Expanded(
+                     child: TabBarView(
+                       children: [
+                         const AbaObrigacoesFestas(),
+                         _buildEntregasEGirasView(userId),
+                       ],
+                     ),
+                   ),
+                 ],
+               ),
+             );
+          }
+
+          return _buildEntregasEGirasView(userId);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Erro: $e")),
+      ),
+    );
+  }
+
+  Widget _buildEntregasEGirasView(String userId) {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Minhas Anotações & Fundamentos",
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: AdminTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Registre os detalhes de cada linha de trabalho para seu desenvolvimento",
+            style: GoogleFonts.outfit(fontSize: 16, color: AdminTheme.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Sidebar de Linhas
+                Container(
+                  width: 300,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: _giras.entries.map((gira) {
+                      return ExpansionTile(
+                        title: Text(
+                          gira.key,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AdminTheme.textPrimary,
+                          ),
+                        ),
+                        initiallyExpanded: gira.value.contains(_selectedLinha),
+                        children: gira.value.map((linha) {
+                          final isSelected = _selectedLinha == linha;
+                          return ListTile(
+                            selected: isSelected,
+                            dense: true,
+                            contentPadding: const EdgeInsets.only(left: 32, right: 16),
+                            selectedTileColor: AdminTheme.primary.withOpacity(0.05),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            title: Text(
+                              linha,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? AdminTheme.primary : AdminTheme.textPrimary,
+                              ),
+                            ),
+                            onTap: () => setState(() => _selectedLinha = linha),
+                          );
+                        }).toList(),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(width: 32),
+                // Área de Conteúdo
+                Expanded(
+                  child: _selectedLinha == null
+                      ? const Center(child: Text("Selecione uma linha para ver as anotações"))
+                      : _LinhaAnotacoesContent(userId: userId, linha: _selectedLinha!),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -160,7 +196,12 @@ class _LinhaAnotacoesContent extends StatefulWidget {
 }
 
 class _LinhaAnotacoesContentState extends State<_LinhaAnotacoesContent> {
-  final _anotacaoController = TextEditingController();
+  final _fundamentosController = TextEditingController();
+  final _ervasController = TextEditingController();
+  final _guiasController = TextEditingController();
+  final _pontosController = TextEditingController();
+  final _obsController = TextEditingController();
+  List<Map<String, dynamic>> _checklist = [];
   bool _salvando = false;
 
   @override
@@ -186,10 +227,22 @@ class _LinhaAnotacoesContentState extends State<_LinhaAnotacoesContent> {
         .get();
     
     if (doc.exists) {
-      _anotacaoController.text = doc.data()?['conteudo'] ?? '';
+      final data = doc.data()!;
+      _fundamentosController.text = data['fundamentos'] ?? '';
+      _ervasController.text = data['ervas'] ?? '';
+      _guiasController.text = data['guias'] ?? '';
+      _pontosController.text = data['pontos'] ?? '';
+      _obsController.text = data['observacao'] ?? '';
+      _checklist = List<Map<String, dynamic>>.from(data['checklist'] ?? []);
     } else {
-      _anotacaoController.text = '';
+      _fundamentosController.clear();
+      _ervasController.clear();
+      _guiasController.clear();
+      _pontosController.clear();
+      _obsController.clear();
+      _checklist = [];
     }
+    if (mounted) setState(() {});
   }
 
   Future<void> _salvar() async {
@@ -200,31 +253,55 @@ class _LinhaAnotacoesContentState extends State<_LinhaAnotacoesContent> {
         .collection('anotacoes')
         .doc(widget.linha)
         .set({
-      'conteudo': _anotacaoController.text,
+      'fundamentos': _fundamentosController.text,
+      'ervas': _ervasController.text,
+      'guias': _guiasController.text,
+      'pontos': _pontosController.text,
+      'observacao': _obsController.text,
+      'checklist': _checklist,
       'ultimaAtualizacao': FieldValue.serverTimestamp(),
     });
     setState(() => _salvando = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Anotação salva com sucesso!")),
+        const SnackBar(content: Text("Fundamentos salvos com sucesso!")),
       );
     }
+  }
+
+  void _addChecklistItem() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Adicionar Item ao Checklist"),
+        content: TextField(controller: controller, decoration: const InputDecoration(labelText: "Item")),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                setState(() {
+                  _checklist.add({'item': controller.text, 'checked': false});
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Adicionar"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,16 +309,13 @@ class _LinhaAnotacoesContentState extends State<_LinhaAnotacoesContent> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                widget.linha,
-                style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
+              Text(widget.linha, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
                 onPressed: _salvando ? null : _salvar,
                 icon: _salvando 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.save, size: 18),
-                label: const Text("SALVAR"),
+                label: const Text("SALVAR TUDO"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AdminTheme.primary,
                   foregroundColor: Colors.white,
@@ -250,23 +324,68 @@ class _LinhaAnotacoesContentState extends State<_LinhaAnotacoesContent> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           const Divider(),
-          const SizedBox(height: 24),
           Expanded(
-            child: TextField(
-              controller: _anotacaoController,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: InputDecoration(
-                hintText: "Escreva aqui os fundamentos, ervas, guias, pontos e observações desta linha...",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              style: GoogleFonts.outfit(fontSize: 16, height: 1.5),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              children: [
+                _buildField("Fundamentos & História", _fundamentosController),
+                _buildField("Ervas & Banhos", _ervasController),
+                _buildField("Guias & Adereços", _guiasController),
+                _buildField("Pontos Cantados & Riscados", _pontosController),
+                _buildField("Observações Gerais", _obsController),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("CHECKLIST DE MATERIAIS", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    IconButton(onPressed: _addChecklistItem, icon: const Icon(Icons.add_circle, color: AdminTheme.primary)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ..._checklist.asMap().entries.map((e) {
+                  final idx = e.key;
+                  final item = e.value;
+                  return CheckboxListTile(
+                    title: Text(item['item'], style: const TextStyle(fontSize: 14)),
+                    value: item['checked'],
+                    onChanged: (v) => setState(() => _checklist[idx]['checked'] = v),
+                    secondary: IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      onPressed: () => setState(() => _checklist.removeAt(idx)),
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  );
+                }).toList(),
+                if (_checklist.isEmpty)
+                   const Padding(padding: EdgeInsets.only(top: 8), child: Text("Nenhum item adicionado.", style: TextStyle(fontSize: 12, color: Colors.grey))),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildField(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AdminTheme.primary)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: null,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+              fillColor: Colors.grey[50],
+            ),
+            style: const TextStyle(fontSize: 14, height: 1.4),
           ),
         ],
       ),

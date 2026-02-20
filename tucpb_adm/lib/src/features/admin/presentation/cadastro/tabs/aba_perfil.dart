@@ -110,7 +110,7 @@ class _AbaPerfilState extends State<AbaPerfil> {
                           ? const Icon(Icons.lock, color: Colors.grey, size: 18)
                           : null,
                     ),
-                    items: ["Medium", "Oga", "Dirigente", "Portaria", "Suporte", "Assistencia"]
+                    items: ["Medium", "Oga", "Dirigente", "Portaria", "Suporte", "Assistencia", "Admin", "Administrador"]
                         .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: widget.canEditPerfil ? (v) => data.updatePerfil(v!) : null,
                   ),

@@ -47,10 +47,8 @@ class DashboardRepository {
     final hoje = DateTime.now();
     final inicioDoDia = DateTime(hoje.year, hoje.month, hoje.day);
     
-    // 1. Tickets do Dia
-    final ticketsStream = _firestore.collectionGroup('tickets')
-      .where('dataEmissao', isGreaterThanOrEqualTo: inicioDoDia.toIso8601String())
-      .snapshots();
+    // 1. Tickets do Dia (Removido where para evitar erro de índice ausente em collectionGroup)
+    final ticketsStream = _firestore.collectionGroup('tickets').snapshots();
 
     // 2. Giras
     final girasStream = _firestore.collection('giras').snapshots();
@@ -71,12 +69,20 @@ class DashboardRepository {
       (QuerySnapshot ticketSnap, QuerySnapshot giraSnap, QuerySnapshot userSnap, QuerySnapshot estoqueSnap, QuerySnapshot manualSnap) {
         
       // 1. Tickets do dia
-      int totalHoje = ticketSnap.docs.length;
+      int totalHoje = 0;
       int atendidosHoje = 0;
       int filaHoje = 0;
-      
+
       for (var doc in ticketSnap.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        
+        // Filtro em memória para hoje
+        final dataEmissaoStr = data['dataEmissao'] as String?;
+        if (dataEmissaoStr == null) continue;
+        final dataEmissao = DateTime.tryParse(dataEmissaoStr);
+        if (dataEmissao == null || dataEmissao.isBefore(inicioDoDia)) continue;
+
+        totalHoje++;
         final status = data['status'] as String?;
         if (status == 'atendido') atendidosHoje++;
         if (status == 'aguardando' || status == 'chamado') filaHoje++;

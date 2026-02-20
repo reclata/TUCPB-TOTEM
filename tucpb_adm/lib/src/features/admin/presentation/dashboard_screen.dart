@@ -40,6 +40,10 @@ class DashboardScreen extends ConsumerWidget {
                 // Próximos Pagamentos (Prominente)
                 const _UpcomingPayments(),
                 const SizedBox(height: 32),
+
+                // Novo: Checklist para Próxima Gira / Estoque
+                const _GiraChecklist(),
+                const SizedBox(height: 32),
                 
                 // Novo: Agenda e Informações Importantes
                 LayoutBuilder(builder: (context, constraints) {
@@ -571,5 +575,162 @@ class _AdminSetupBannerState extends State<_AdminSetupBanner> {
         ],
       ),
     );
+  }
+}
+
+class _GiraChecklist extends ConsumerWidget {
+  const _GiraChecklist();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userData = ref.watch(userDataProvider).asData?.value;
+    final perfil = (userData?['perfil'] ?? '').toString().toLowerCase();
+    final isAdmin = ['admin', 'suporte', 'administrador', 'dirigente'].contains(perfil);
+    final userId = userData?['docId'] ?? userData?['uid'] ?? '';
+
+    if (isAdmin) {
+      return _buildAdminChecklist(context);
+    } else {
+      return _buildMediumChecklist(context, userId);
+    }
+  }
+
+  Widget _buildAdminChecklist(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shopping_cart_checkout, color: Colors.orange, size: 20),
+              const SizedBox(width: 12),
+              Text("Checklist de Compras do Estoque", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('checklist_manual').where('comprado', isEqualTo: false).snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Text("Nenhum item pendente no estoque.", style: TextStyle(color: Colors.grey));
+              }
+              final docs = snapshot.data!.docs;
+              return Column(
+                children: docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return CheckboxListTile(
+                    title: Text(data['item'] ?? '', style: const TextStyle(fontSize: 14)),
+                    subtitle: Text("Qtd: ${data['quantidade'] ?? ''}", style: const TextStyle(fontSize: 12)),
+                    value: false,
+                    onChanged: (v) {
+                       doc.reference.update({'comprado': true, 'dataCompra': FieldValue.serverTimestamp()});
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediumChecklist(BuildContext context, String userId) {
+    // 1. Achar a próxima gira
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('giras')
+          .where('ativo', isEqualTo: true)
+          .where('data', isGreaterThanOrEqualTo: DateTime.now())
+          .orderBy('data')
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+           return const SizedBox.shrink();
+        }
+        final docGira = snapshot.data!.docs.first;
+        final dataGira = docGira.data() as Map<String, dynamic>;
+        final nomeGira = dataGira['nome'] ?? '';
+        final detectada = _detectarLinha(nomeGira);
+
+        if (detectada.isEmpty) return const SizedBox.shrink();
+
+        // 2. Buscar anotações do médium para essa linha
+        return StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(userId)
+              .collection('anotacoes')
+              .doc(detectada)
+              .snapshots(),
+          builder: (context, snapNote) {
+            if (!snapNote.hasData || !snapNote.data!.exists) return const SizedBox.shrink();
+            final dataNote = snapNote.data!.data() as Map<String, dynamic>;
+            final checklist = List<Map<String, dynamic>>.from(dataNote['checklist'] ?? []);
+            
+            if (checklist.isEmpty) return const SizedBox.shrink();
+
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                    children: [
+                      const Icon(Icons.list_alt, color: AdminTheme.primary, size: 20),
+                      const SizedBox(width: 12),
+                      Text("Minha Lista: $detectada", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Providenciar para a próxima gira: ${DateFormat('dd/MM').format((dataGira['data'] as Timestamp).toDate())}", 
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ...checklist.asMap().entries.map((e) {
+                    final idx = e.key;
+                    final item = e.value;
+                    return CheckboxListTile(
+                      title: Text(item['item'], style: const TextStyle(fontSize: 14)),
+                      value: item['checked'] ?? false,
+                      onChanged: (v) {
+                        checklist[idx]['checked'] = v;
+                        FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(userId)
+                          .collection('anotacoes')
+                          .doc(detectada)
+                          .update({'checklist': checklist});
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  }).toList(),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _detectarLinha(String nome) {
+    final n = nome.toLowerCase();
+    final linhas = [
+      'Preto Velho', 'Caboclo', 'Erê (Criança)', 'Exu', 'Pombagira',
+      'Baiano', 'Marinheiro', 'Boiadeiro', 'Cicano', 'Malandro (Zé Pelintra)',
+      'Oriental', 'Cura', 'Ogum', 'Oxóssi', 'Xangô', 'Iansã', 'Oxum', 
+      'Iemanjá', 'Nanã', 'Obaluaê', 'Omulu', 'Oxalá', 'Entrega'
+    ];
+    for (final linha in linhas) {
+      if (n.contains(linha.toLowerCase())) return linha;
+    }
+    return '';
   }
 }

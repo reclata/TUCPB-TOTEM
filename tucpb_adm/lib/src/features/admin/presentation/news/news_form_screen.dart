@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:tucpb_adm/src/features/admin/data/news_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/news_repository.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
@@ -29,8 +31,10 @@ class _NewsFormScreenState extends ConsumerState<NewsFormScreen> {
   bool _isPublicada = false;
   bool _isArquivada = false;
   bool _salvando = false;
+  bool _uploadingImage = false;
+  bool _uploadingPdf = false;
 
-  final List<String> _opcoesPerfis = ['Médium', 'Assistência', 'Cambono', 'Dirigente', 'Financeiro'];
+  final List<String> _opcoesPerfis = ['Médium', 'Assistência', 'Cambono', 'Dirigente', 'Financeiro', 'Admin', 'Administrador'];
 
   @override
   void initState() {
@@ -110,6 +114,57 @@ class _NewsFormScreenState extends ConsumerState<NewsFormScreen> {
       }
     } finally {
       if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  Future<void> _pickAndUpload(bool isImage) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: isImage ? FileType.image : FileType.custom,
+        allowedExtensions: isImage ? null : ['pdf'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) return;
+
+      setState(() {
+        if (isImage) _uploadingImage = true;
+        else _uploadingPdf = true;
+      });
+
+      final extension = file.extension ?? (isImage ? 'jpg' : 'pdf');
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$extension';
+      final folder = isImage ? 'news_images' : 'news_pdfs';
+      
+      final storageRef = FirebaseStorage.instance.ref().child('$folder/$fileName');
+      final uploadTask = storageRef.putData(
+        bytes, 
+        SettableMetadata(contentType: isImage ? 'image/jpeg' : 'application/pdf')
+      );
+      
+      final snapshot = await uploadTask;
+      final url = await snapshot.ref.getDownloadURL();
+
+      setState(() {
+        if (isImage) {
+          _imagemController.text = url;
+          _uploadingImage = false;
+        } else {
+          _pdfController.text = url;
+          _uploadingPdf = false;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _uploadingImage = false;
+        _uploadingPdf = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro no upload: $e'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -200,32 +255,52 @@ class _NewsFormScreenState extends ConsumerState<NewsFormScreen> {
                   _buildSectionCard(
                     title: 'Anexos e Mídia',
                     children: [
-                      TextFormField(
-                        controller: _imagemController,
-                        decoration: const InputDecoration(
-                          labelText: 'URL da Imagem Principal',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.image),
-                          hintText: 'https://exemplo.com/imagem.jpg',
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _imagemController,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                labelText: 'Imagem Principal (Anexo)',
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.image),
+                                suffixIcon: _uploadingImage 
+                                    ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2))
+                                    : IconButton(icon: const Icon(Icons.upload_file), onPressed: () => _pickAndUpload(true)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _videoController,
                         decoration: const InputDecoration(
-                          labelText: 'URL do Vídeo (Youtube/Vimeo)',
+                          labelText: 'URL do Vídeo (Youtube, Tiktok, Instagram, Facebook)',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.play_circle),
+                          hintText: 'Cole o link do vídeo aqui',
                         ),
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _pdfController,
-                        decoration: const InputDecoration(
-                          labelText: 'URL do Documento PDF',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.picture_as_pdf),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _pdfController,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                labelText: 'Documento PDF (Anexo)',
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.picture_as_pdf),
+                                suffixIcon: _uploadingPdf
+                                    ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2))
+                                    : IconButton(icon: const Icon(Icons.upload_file), onPressed: () => _pickAndUpload(false)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

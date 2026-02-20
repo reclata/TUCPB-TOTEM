@@ -54,6 +54,31 @@ class _LembretesScreenState extends ConsumerState<LembretesScreen> {
     }
   }
 
+  Future<void> _confirmarExclusaoLembrete(String id) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir Lembrete"),
+        content: const Text("Deseja realmente remover este lembrete?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Excluir"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await FirebaseFirestore.instance.collection('lembretes').doc(id).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lembrete removido.")));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,22 +186,31 @@ class _LembretesScreenState extends ConsumerState<LembretesScreen> {
                                   contentPadding: EdgeInsets.zero,
                                   title: Text(data['titulo'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                                   subtitle: Text(data['mensagem'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(dataFormatada, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                      const SizedBox(height: 4),
-                                      Switch(
-                                        value: data['ativo'] ?? false,
-                                        onChanged: (v) => doc.reference.update({'ativo': v}),
-                                        activeColor: Colors.green,
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                    ],
-                                  ),
-                                  isThreeLine: true,
-                                );
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(dataFormatada, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                            const SizedBox(height: 4),
+                                            Switch(
+                                              value: data['ativo'] ?? false,
+                                              onChanged: (v) => doc.reference.update({'ativo': v}),
+                                              activeColor: Colors.green,
+                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                          ],
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                          onPressed: () => _confirmarExclusaoLembrete(doc.id),
+                                        ),
+                                      ],
+                                    ),
+                                    isThreeLine: true,
+                                  );
                               },
                             );
                           },

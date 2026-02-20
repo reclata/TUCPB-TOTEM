@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -627,7 +627,7 @@ class AdminSidebar extends ConsumerWidget {
                     icon: FontAwesomeIcons.shop, 
                     label: "TUCPB Shop",
                     isSelected: uri.startsWith('/shop'),
-                    onTap: () => html.window.open('https://tucpb.myshopify.com', '_blank'),
+                    onTap: () => launchUrl(Uri.parse('https://tucpb.myshopify.com')),
                   ),
                 if (isAdmin)
                   _SidebarItem(
@@ -661,7 +661,7 @@ class AdminSidebar extends ConsumerWidget {
                 _SidebarItem(
                   icon: FontAwesomeIcons.computer, 
                   label: "Acessar Totem",
-                  onTap: () => html.window.open('https://tucpb---token.web.app/kiosk', '_self'),
+                  onTap: () => launchUrl(Uri.parse('https://tucpb---token.web.app/kiosk')),
                 ),
               ],
             ),
