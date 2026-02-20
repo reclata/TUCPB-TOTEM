@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tucpb_adm/src/features/admin/presentation/financeiro/tabs/aba_asaas.dart';
-import 'package:tucpb_adm/src/features/admin/presentation/financeiro/tabs/aba_avulsos.dart';
-import 'package:tucpb_adm/src/features/admin/presentation/financeiro/tabs/aba_geral_financeiro.dart';
-import 'package:tucpb_adm/src/features/admin/presentation/financeiro/tabs/aba_pagamentos.dart';
+import 'tabs/aba_asaas.dart';
+import 'tabs/aba_avulsos.dart';
+import 'tabs/aba_geral_financeiro.dart';
+import 'tabs/aba_pagamentos.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 

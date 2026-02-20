@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'gira_model.dart';
 
 final girasRepositoryProvider = Provider<GirasRepository>((ref) {

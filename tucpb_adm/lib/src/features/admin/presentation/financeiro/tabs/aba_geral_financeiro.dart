@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:tucpb_adm/src/features/admin/data/cobranca_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/financeiro_repository.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
+import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 
 final _totaisProvider = FutureProvider<Map<String, double>>((ref) {
   return ref.watch(financeiroRepositoryProvider).calcularTotais();
