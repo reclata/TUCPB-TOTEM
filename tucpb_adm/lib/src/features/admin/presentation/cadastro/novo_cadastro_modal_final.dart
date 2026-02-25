@@ -54,10 +54,16 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
     setState(() => _isSaving = true);
     try {
       final map = _formData.toMap();
+      final collection = FirebaseFirestore.instance.collection('usuarios');
+      
       if (widget.docId == null) {
-        await FirebaseFirestore.instance.collection('usuarios').add(map);
+        final docRef = collection.doc();
+        map['id'] = docRef.id;
+        map['terreiroId'] = 'demo-terreiro'; // Garantindo terreiroId
+        await docRef.set(map);
       } else {
-        await FirebaseFirestore.instance.collection('usuarios').doc(widget.docId).update(map);
+        map['id'] = widget.docId;
+        await collection.doc(widget.docId).update(map);
       }
 
       // Log
@@ -197,20 +203,29 @@ class _NovoCadastroModalFinalState extends ConsumerState<NovoCadastroModalFinal>
                       child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
                     ),
                     const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: _isSaving ? null : _salvar,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AdminTheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text("Salvar Cadastro"),
+                    p.Consumer<CadastroFormData>(
+                      builder: (context, data, _) {
+                        final isUploading = data.isUploadingFoto;
+                        return ElevatedButton(
+                          onPressed: (_isSaving || isUploading) ? null : _salvar,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AdminTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          ),
+                          child: (_isSaving || isUploading)
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white, 
+                                    strokeWidth: 2,
+                                    value: isUploading ? null : null, // Could add progress later
+                                  ),
+                                )
+                              : const Text("Salvar Cadastro"),
+                        );
+                      },
                     ),
                   ],
                 ),

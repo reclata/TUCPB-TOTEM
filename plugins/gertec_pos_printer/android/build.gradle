@@ -1,0 +1,33 @@
+group 'com.qz.gertec_pos_printer'
+version '1.0'
+
+apply plugin: 'com.android.library'
+
+android {
+    if (project.android.hasProperty("namespace")) {
+        namespace 'com.qz.gertec_pos_printer'
+    }
+
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+
+    dependencies {
+        implementation('com.journeyapps:zxing-android-embedded:4.3.0')
+        implementation 'com.google.zxing:core:3.4.1'
+        implementation("androidx.appcompat:appcompat:1.6.1")
+        implementation("androidx.appcompat:appcompat-resources:1.6.1")
+        implementation fileTree(include: ['*.jar'], dir: 'libs')
+        compileOnly fileTree(include: ['*.aar'], dir: 'libs')
+
+        implementation 'org.apache.commons:commons-lang3:3.9'
+        implementation 'com.google.code.gson:gson:2.10.1'
+    }
+}

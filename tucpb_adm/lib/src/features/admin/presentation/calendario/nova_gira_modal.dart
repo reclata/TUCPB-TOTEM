@@ -21,6 +21,7 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
   final _descricaoController = TextEditingController();
   final _horaInicioController = TextEditingController(text: '19:00');
   final _horaFimController = TextEditingController(text: '22:00');
+  final _horarioKioskController = TextEditingController(text: '18:00');
   DateTime _dataSelecionada = DateTime.now();
   String _tipo = 'gira';
   String? _mediumId;
@@ -50,6 +51,7 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
       _descricaoController.text = g.descricao ?? '';
       _horaInicioController.text = g.horarioInicio;
       _horaFimController.text = g.horarioFim;
+      _horarioKioskController.text = g.horarioKiosk;
       _dataSelecionada = g.data;
       _tipo = g.tipo;
       _mediumId = g.mediumId;
@@ -104,6 +106,7 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
           'mediumId': _tipo == 'limpeza' ? _mediumId : null,
           'mediumNome': _tipo == 'limpeza' ? _mediumNome : null,
           'visivelAssistencia': _visivelAssistencia,
+          'horarioKiosk': _horarioKioskController.text,
         });
       } else {
         final novaGira = GiraModel(
@@ -118,6 +121,7 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
           mediumId: _tipo == 'limpeza' ? _mediumId : null,
           mediumNome: _tipo == 'limpeza' ? _mediumNome : null,
           visivelAssistencia: _visivelAssistencia,
+          horarioKiosk: _horarioKioskController.text,
         );
         await repo.criarGira(novaGira);
       }
@@ -269,11 +273,20 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
                     decoration: const InputDecoration(labelText: 'Início', border: OutlineInputBorder()),
                   ),
                 ),
-                SizedBox(
-                  width: 140,
                   child: TextFormField(
                     controller: _horaFimController,
                     decoration: const InputDecoration(labelText: 'Fim', border: OutlineInputBorder()),
+                  ),
+                ),
+                SizedBox(
+                  width: 250,
+                  child: TextFormField(
+                    controller: _horarioKioskController,
+                    decoration: const InputDecoration(
+                      labelText: 'Início Emissão Senhas (Kiosk)', 
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.tablet_android),
+                    ),
                   ),
                 ),
               ],

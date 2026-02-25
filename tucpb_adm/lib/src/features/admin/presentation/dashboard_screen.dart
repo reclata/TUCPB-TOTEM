@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tucpb_adm/src/features/admin/data/cobranca_model.dart';
+import 'package:tucpb_adm/src/features/admin/data/financeiro_repository.dart';
 import 'package:tucpb_adm/src/features/admin/data/dashboard_repository.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
@@ -221,15 +224,15 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.1)),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Stack(
         children: [
           Positioned(
             right: -10,
             top: -10,
-            child: Icon(icon, color: color.withOpacity(0.05), size: 60),
+            child: Icon(icon, color: color.withValues(alpha: 0.05), size: 60),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,7 +240,7 @@ class _StatCard extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(height: 12),
@@ -262,6 +265,8 @@ class _UpcomingPayments extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cobrancasAsync = ref.watch(cobrancasFiltradasProvider);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
@@ -271,19 +276,50 @@ class _UpcomingPayments extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Próximos Pagamentos & Histórico", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AdminTheme.textPrimary)),
-              TextButton(onPressed: () {}, child: const Text("Ver Histórico Completo")),
+              Text("Financeiro: Próximos & Recentos", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AdminTheme.textPrimary)),
+              TextButton(
+                onPressed: () => context.go('/financeiro'), 
+                child: const Text("Ver Tudo"),
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          const Text("PENDENTES", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-          const SizedBox(height: 12),
-          _PaymentItem(titulo: "Mensalidade Fev/26", valor: "R\$ 100,00", data: "Vence em 25/02", status: "Pendente", statusColor: Colors.orange),
-          const Divider(height: 32),
-          const Text("HISTÓRICO (ÚLTIMO MÊS)", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-          const SizedBox(height: 12),
-          _PaymentItem(titulo: "Mensalidade Jan/26", valor: "R\$ 100,00", data: "Pago em 20/01", status: "Pago", statusColor: Colors.green),
-          _PaymentItem(titulo: "Rifa Gira de Umbanda", valor: "R\$ 20,00", data: "Pago em 15/01", status: "Pago", statusColor: Colors.green),
+          
+          cobrancasAsync.when(
+            loading: () => const Center(child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: CircularProgressIndicator(),
+            )),
+            error: (e, _) => Center(child: Text('Erro ao carregar pagamentos: $e')),
+            data: (lista) {
+              final pendentes = lista.where((c) => c.status != StatusCobranca.pago).take(3).toList();
+              final pagos = lista.where((c) => c.status == StatusCobranca.pago).take(2).toList();
+
+              if (pendentes.isEmpty && pagos.isEmpty) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text("Nenhuma cobrança registrada.", style: TextStyle(color: Colors.grey)),
+                ));
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (pendentes.isNotEmpty) ...[
+                    const Text("PENDENTES", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+                    const SizedBox(height: 12),
+                    ...pendentes.map((c) => _PaymentItem(cobranca: c)).toList(),
+                  ],
+                  if (pagos.isNotEmpty) ...[
+                    const Divider(height: 32),
+                    const Text("HISTÓRICO RECENTE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+                    const SizedBox(height: 12),
+                    ...pagos.map((c) => _PaymentItem(cobranca: c)).toList(),
+                  ],
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -291,36 +327,47 @@ class _UpcomingPayments extends ConsumerWidget {
 }
 
 class _PaymentItem extends StatelessWidget {
-  final String titulo, valor, data, status;
-  final Color statusColor;
-  const _PaymentItem({required this.titulo, required this.valor, required this.data, required this.status, required this.statusColor});
+  final CobrancaModel cobranca;
+  const _PaymentItem({required this.cobranca});
 
   @override
   Widget build(BuildContext context) {
+    final fmt = NumberFormat.simpleCurrency(locale: 'pt_BR');
+    final (statusLabel, statusColor) = switch (cobranca.status) {
+      StatusCobranca.pago => ("Pago", Colors.green),
+      StatusCobranca.atrasado => ("Atrasado", Colors.red),
+      StatusCobranca.emAndamento => ("Processando", Colors.blue),
+      StatusCobranca.naoIniciado => ("Pendente", Colors.orange),
+    };
+
+    final dateText = cobranca.status == StatusCobranca.pago
+        ? "Pago em ${DateFormat('dd/MM').format(cobranca.dataPagamento ?? cobranca.dataCriacao)}"
+        : "Vence em ${cobranca.dataVencimento != null ? DateFormat('dd/MM').format(cobranca.dataVencimento!) : '--/--'}";
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: statusColor.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(status == "Pago" ? Icons.check : Icons.timer_outlined, color: statusColor, size: 18),
+            decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(cobranca.status == StatusCobranca.pago ? Icons.check : Icons.timer_outlined, color: statusColor, size: 18),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(data, style: TextStyle(color: AdminTheme.textSecondary, fontSize: 12)),
+                Text(cobranca.tipo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(dateText, style: TextStyle(color: AdminTheme.textSecondary, fontSize: 12)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(valor, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
+              Text(fmt.format(cobranca.valor), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(statusLabel, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
             ],
           ),
         ],
@@ -417,7 +464,7 @@ class _AgendaCard extends ConsumerWidget {
                         ),
                       ),
                       if (isCleaning && isAdmin && data['mediumNome'] != null)
-                        Text(data['mediumNome'], style: TextStyle(fontSize: 10, color: color.withOpacity(0.8), fontStyle: FontStyle.italic)),
+                        Text(data['mediumNome'], style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.8), fontStyle: FontStyle.italic)),
                     ],
                   ),
                 );

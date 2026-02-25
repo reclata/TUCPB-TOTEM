@@ -16,39 +16,43 @@ class AbaPerfil extends StatefulWidget {
 
 class _AbaPerfilState extends State<AbaPerfil> {
   Uint8List? _imagemBytes;
-  String? _uploadedFotoUrl;
-  bool _uploadingFoto = false;
 
   Future<void> _pickImage(CadastroFormData data) async {
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1000,
+        maxHeight: 1000,
+      );
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
+      
+      // Mostrar preview local imediatamente e avisar que está subindo
       setState(() {
         _imagemBytes = bytes;
-        _uploadingFoto = true;
       });
+      data.setUploadingFoto(true);
 
-      // Upload to Firebase Storage
+      // Upload para Firebase Storage
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('fotos_usuarios/${DateTime.now().millisecondsSinceEpoch}.jpg');
-      
+
       final uploadTask = storageRef.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      
+      // Monitorar progresso se necessário, mas por enquanto basta o wait
       final snapshot = await uploadTask;
       final url = await snapshot.ref.getDownloadURL();
 
-      setState(() {
-        _uploadedFotoUrl = url;
-        _uploadingFoto = false;
-      });
-
       // Salvar no controller de dados
-      data.fotoUrl = url;
+      data.updateFotoUrl(url);
+      data.setUploadingFoto(false);
+
     } catch (e) {
-      setState(() => _uploadingFoto = false);
+      data.setUploadingFoto(false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Erro ao selecionar foto: $e"), backgroundColor: Colors.red),
@@ -179,53 +183,61 @@ class _AbaPerfilState extends State<AbaPerfil> {
           const SizedBox(height: 12),
           
           // Foto Upload
-          GestureDetector(
-            onTap: () => _pickImage(data),
-            child: Container(
-              height: 150,
-              width: 150,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AdminTheme.primary.withOpacity(0.3), width: 2),
-                image: _imagemBytes != null
-                    ? DecorationImage(image: MemoryImage(_imagemBytes!), fit: BoxFit.cover)
-                    : null,
-              ),
-              child: _uploadingFoto
-                  ? const Center(child: CircularProgressIndicator())
-                  : _imagemBytes == null
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_a_photo, color: Colors.grey, size: 40),
-                              SizedBox(height: 8),
-                              Text("Clique para\nselecionar", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
-                            ],
-                          ),
-                        )
-                      : Align(
-                          alignment: Alignment.bottomRight,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                              child: const Icon(Icons.edit, color: Colors.grey, size: 16),
+          Center(
+            child: GestureDetector(
+              onTap: () => _pickImage(data),
+              child: Container(
+                height: 220,
+                width: 220,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AdminTheme.primary.withValues(alpha: 0.3), width: 2),
+                  image: _imagemBytes != null
+                      ? DecorationImage(image: MemoryImage(_imagemBytes!), fit: BoxFit.cover)
+                      : data.fotoUrl != null
+                          ? DecorationImage(image: NetworkImage(data.fotoUrl!), fit: BoxFit.cover)
+                          : null,
+                ),
+                child: data.isUploadingFoto
+                    ? const Center(child: CircularProgressIndicator())
+                    : (_imagemBytes == null && data.fotoUrl == null)
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo, color: Colors.grey, size: 48),
+                                SizedBox(height: 12),
+                                Text("Clique para selecionar\numa foto nitida", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              ],
+                            ),
+                          )
+                        : Align(
+                            alignment: Alignment.bottomRight,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)]),
+                                child: const Icon(Icons.edit, color: AdminTheme.primary, size: 20),
+                              ),
                             ),
                           ),
-                        ),
+              ),
             ),
           ),
-          if (_uploadedFotoUrl != null)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
+          if (data.fotoUrl != null && !data.isUploadingFoto)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  SizedBox(width: 4),
-                  Text("Foto enviada com sucesso!", style: TextStyle(color: Colors.green, fontSize: 12)),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    _imagemBytes != null ? "Foto enviada com sucesso!" : "Foto carregada", 
+                    style: const TextStyle(color: Colors.green, fontSize: 12)
+                  ),
                 ],
               ),
             ),

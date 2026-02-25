@@ -8,11 +8,12 @@ part of 'models.dart';
 
 Gira _$GiraFromJson(Map<String, dynamic> json) => Gira(
   id: json['id'] as String,
-  terreiroId: json['terreiroId'] as String,
-  linha: json['linha'] as String,
-  tema: json['tema'] as String,
+  terreiroId: json['terreiroId'] as String?,
+  linha: json['linha'] as String? ?? '',
+  tema: Gira._readGiraTema(json, 'tema') as String? ?? '',
   data: const TimestampConverter().fromJson(json['data'] as Object),
-  status: json['status'] as String,
+  status: json['status'] as String? ?? 'agendada',
+  ativo: json['ativo'] as bool?,
   horarioInicio: json['horarioInicio'] as String? ?? '',
   horarioKiosk: json['horarioKiosk'] as String? ?? '',
   horarioEncerramentoKiosk: json['horarioEncerramentoKiosk'] as String?,
@@ -36,6 +37,7 @@ Map<String, dynamic> _$GiraToJson(Gira instance) => <String, dynamic>{
   'tema': instance.tema,
   'data': const TimestampConverter().toJson(instance.data),
   'status': instance.status,
+  'ativo': instance.ativo,
   'horarioInicio': instance.horarioInicio,
   'horarioKiosk': instance.horarioKiosk,
   'horarioEncerramentoKiosk': instance.horarioEncerramentoKiosk,
@@ -62,17 +64,18 @@ Map<String, dynamic> _$EntidadeToJson(Entidade instance) => <String, dynamic>{
 
 MediumEntidade _$MediumEntidadeFromJson(Map<String, dynamic> json) =>
     MediumEntidade(
-      entidadeId: json['entidadeId'] as String,
-      entidadeNome: json['entidadeNome'] as String,
-      linha: json['linha'] as String,
-      tipo: json['tipo'] as String,
-      status: json['status'] as String,
+      entidadeId: json['entidadeId'] as String? ?? '',
+      entidadeNome:
+          MediumEntidade._readEntidadeNome(json, 'nome') as String? ?? '',
+      linha: json['linha'] as String? ?? '',
+      tipo: json['tipo'] as String? ?? '',
+      status: json['status'] as String? ?? 'ativo',
     );
 
 Map<String, dynamic> _$MediumEntidadeToJson(MediumEntidade instance) =>
     <String, dynamic>{
       'entidadeId': instance.entidadeId,
-      'entidadeNome': instance.entidadeNome,
+      'nome': instance.entidadeNome,
       'linha': instance.linha,
       'tipo': instance.tipo,
       'status': instance.status,
@@ -80,9 +83,9 @@ Map<String, dynamic> _$MediumEntidadeToJson(MediumEntidade instance) =>
 
 Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
   id: json['id'] as String,
-  terreiroId: json['terreiroId'] as String,
-  nome: json['nome'] as String,
-  ativo: json['ativo'] as bool,
+  terreiroId: json['terreiroId'] as String?,
+  nome: json['nome'] as String? ?? '',
+  ativo: json['ativo'] as bool? ?? true,
   entidades:
       (json['entidades'] as List<dynamic>?)
           ?.map((e) => MediumEntidade.fromJson(e as Map<String, dynamic>))
@@ -92,7 +95,12 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
   atendimentosRealizados:
       (json['atendimentosRealizados'] as num?)?.toInt() ?? 0,
   faltas: (json['faltas'] as num?)?.toInt() ?? 0,
-  maxFichas: (json['maxFichas'] as num?)?.toInt() ?? 10,
+  maxFichas: (json['maxFichas'] as num?)?.toInt() ?? 0,
+  cargo: json['cargo'] as String? ?? '',
+  fotoUrl: json['fotoUrl'] as String? ?? '',
+  observacoes: json['observacao'] as String? ?? '',
+  ultimaGira: json['ultimaGira'] as String? ?? '',
+  tipoAcesso: json['perfil'] as String? ?? 'medium',
 );
 
 Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
@@ -105,6 +113,11 @@ Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
   'atendimentosRealizados': instance.atendimentosRealizados,
   'faltas': instance.faltas,
   'maxFichas': instance.maxFichas,
+  'cargo': instance.cargo,
+  'fotoUrl': instance.fotoUrl,
+  'observacao': instance.observacoes,
+  'ultimaGira': instance.ultimaGira,
+  'perfil': instance.tipoAcesso,
 };
 
 Ticket _$TicketFromJson(Map<String, dynamic> json) => Ticket(

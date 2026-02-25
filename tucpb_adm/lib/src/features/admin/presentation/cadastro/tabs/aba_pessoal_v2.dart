@@ -91,7 +91,7 @@ class AbaPessoalTab extends StatelessWidget {
           DropdownButtonFormField<String>(
             value: data.estadoCivil,
             decoration: const InputDecoration(labelText: "Estado Civil", border: OutlineInputBorder()),
-            items: ["Solteiro", "Casado", "Namorando", "Viuvo"]
+            items: ["Solteiro", "Solteira", "Casado", "Casada", "Namorando", "Viuvo", "Viuva"]
                 .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
             onChanged: (v) {
                 data.estadoCivil = v!;
@@ -127,9 +127,25 @@ class AbaPessoalTab extends StatelessWidget {
              for (int index = 0; index < data.nomesFilhosControllers.length; index++)
                Padding(
                  padding: const EdgeInsets.only(bottom: 8.0),
-                 child: TextFormField(
-                   controller: data.nomesFilhosControllers[index],
-                   decoration: InputDecoration(labelText: "Nome do Filho ${index + 1}", border: const OutlineInputBorder()),
+                 child: Row(
+                   children: [
+                     Expanded(
+                       flex: 3,
+                       child: TextFormField(
+                         controller: data.nomesFilhosControllers[index],
+                         decoration: InputDecoration(labelText: "Nome do Filho ${index + 1}", border: const OutlineInputBorder()),
+                       ),
+                     ),
+                     const SizedBox(width: 12),
+                     Expanded(
+                       flex: 1,
+                       child: TextFormField(
+                         controller: data.idadesFilhosControllers[index],
+                         decoration: const InputDecoration(labelText: "Idade", border: OutlineInputBorder()),
+                         keyboardType: TextInputType.number,
+                       ),
+                     ),
+                   ],
                  ),
                ),
           
@@ -155,6 +171,38 @@ class AbaPessoalTab extends StatelessWidget {
           ),
           if (data.alergias)
             TextFormField(controller: data.quaisAlergiasController, decoration: const InputDecoration(labelText: "Quais?", border: OutlineInputBorder())),
+
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text("Toma medicação?"),
+            value: data.tomaMedicacao,
+            onChanged: (v) { data.updateMedicacao(v); },
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (data.tomaMedicacao) ...[
+            ...List.generate(data.medicamentosControllers.length, (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: data.medicamentosControllers[index],
+                      decoration: InputDecoration(labelText: "Nome da Medicação ${index + 1}", border: const OutlineInputBorder()),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                    onPressed: () => data.removeMedicamento(index),
+                  )
+                ],
+              ),
+            )),
+            TextButton.icon(
+              onPressed: data.addMedicamento, 
+              icon: const Icon(Icons.add), 
+              label: const Text("Adicionar Medicação"),
+            ),
+          ],
 
           const SizedBox(height: 24),
           const Text("Contato de Emergência", style: TextStyle(fontWeight: FontWeight.bold)),

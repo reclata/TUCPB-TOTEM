@@ -110,12 +110,12 @@ class LoginScreen extends StatelessWidget {
                     // Social / Divider (Optional)
                     Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.grey.withOpacity(0.2))),
+                        Expanded(child: Divider(color: Colors.grey.withValues(alpha: 0.2))),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text("OU", style: TextStyle(color: Colors.grey, fontSize: 12)),
                         ),
-                        Expanded(child: Divider(color: Colors.grey.withOpacity(0.2))),
+                        Expanded(child: Divider(color: Colors.grey.withValues(alpha: 0.2))),
                       ],
                     ),
                      const SizedBox(height: 32),
@@ -197,11 +197,11 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             prefixIcon: const Icon(Icons.email_outlined, size: 20),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -224,11 +224,11 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

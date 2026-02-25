@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -25,19 +24,20 @@ final Map<String, IconData> _lineIcons = {
   'Pomba Gira': Icons.face_2_outlined,
 };
 
-// Mapeamento de imagens para cada linha (devem ser colocadas em assets/images/linhas/)
+// Mapeamento normalizado para MAIÚSCULAS para evitar problemas de case-sensitivity
 final Map<String, String> _lineImages = {
-  'Caboclo': 'assets/images/linhas/caboclo.jpg',
-  'Erê': 'assets/images/linhas/ere.jpg',
-  'Preto Velho': 'assets/images/linhas/preto_velho.jpg',
-  'Boiadeiro': 'assets/images/linhas/boiadeiro.jpg',
-  'Marinheiro': 'assets/images/linhas/marinheiro.jpg',
-  'Baiano': 'assets/images/linhas/baiano.jpg',
-  'Cigano': 'assets/images/linhas/cigano.jpg',
-  'Malandro': 'assets/images/linhas/malandro.jpg',
-  'Exu': 'assets/images/linhas/exu.jpg',
-  'Pomba Gira': 'assets/images/linhas/pombo_gira.jpg',
-  'Esquerda': 'assets/images/linhas/exu.jpg', // Fallback para Esquerda
+  'CABOCLO': 'assets/images/linhas/caboclo.jpg',
+  'ERE': 'assets/images/linhas/ere.jpg',
+  'PRETO VELHO': 'assets/images/linhas/preto_velho.jpg',
+  'BOIADEIRO': 'assets/images/linhas/boiadeiro.jpg',
+  'MARINHEIRO': 'assets/images/linhas/marinheiro.jpg',
+  'BAIANO': 'assets/images/linhas/baiano.jpg',
+  'CIGANO': 'assets/images/linhas/cigano.jpg',
+  'MALANDRO': 'assets/images/linhas/malandro.jpg',
+  'EXU': 'assets/images/linhas/exu.jpg',
+  'POMBA GIRA': 'assets/images/linhas/pombo_gira.jpg',
+  'POMBO GIRA': 'assets/images/linhas/pombo_gira.jpg',
+  'ESQUERDA': 'assets/images/linhas/exu.jpg',
 };
 
 final Map<String, List<String>> _giraLineGroups = {
@@ -63,12 +63,12 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Retrieve from local storage/secure storage
-    const terreiroId = 'demo-terreiro';
+    // Sincronizado com global_providers.dart: 'demo-terreiro'
+    final terreiroId = ref.watch(selectedTerreiroIdProvider) ?? 'demo-terreiro'; 
     final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           Container(
@@ -84,39 +84,107 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
             ),
           ),
           
-          Center(
+          SafeArea(
+            child: Center(
             child: activeGiraAsync.when(
               data: (activeGira) {
-                if (activeGira == null) {
-                  return _buildClosedState();
-                }
+                // Prioridade 1: Tela de Sucesso após emitir ticket
                 if (_lastIssuedTicket != null) {
                   return _buildTicketSuccessState(_lastIssuedTicket!, _lastIssuedGira!, _lastIssuedEntityName!);
                 }
-                if (!_showEntitySelection) {
-                  return _buildLandingState();
+                
+                // Prioridade 2: Seleção de Entidades (Fluxo interno)
+                // Funciona com gira real OU com fallback caso Firestore retorne null
+                if (_showEntitySelection) {
+                  final giraParaUsar = activeGira ?? _fallbackGira;
+                  return _buildOpenState(giraParaUsar);
                 }
-                return _buildOpenState(activeGira);
+
+                // Prioridade 3: Tela Inicial (Bem-vindos) - SEMPRE VISÍVEL
+                return _buildLandingState(activeGira);
               },
-              loading: () => const CircularProgressIndicator(color: Colors.amber),
+              loading: () => const CircularProgressIndicator(color: Colors.brown),
               error: (err, stack) => Text('Erro ao carregar: $err', style: const TextStyle(color: Colors.red)),
             ),
+           ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLandingState() {
+  /// Gira de fallback usada quando o Firestore não retorna giras
+  Gira get _fallbackGira => Gira(
+    id: 'kiosk-fallback',
+    terreiroId: 'demo-terreiro',
+    tema: 'Gira',
+    linha: '',
+    data: DateTime.now(),
+    status: 'aberta',
+    horarioInicio: '18:00',
+    horarioKiosk: '18:00',
+    encerramentoKioskAtivo: false,
+    mediumsParticipantes: const [],
+    presencas: const {},
+  );
+
+  bool _isKioskOpen(Gira? gira) {
+    if (gira == null) {
+      debugPrint('[KIOSK_DEBUG] Gira é NULA');
+      return false;
+    }
+    
+    debugPrint('[KIOSK_DEBUG] Validando Gira: ${gira.tema}');
+    debugPrint('[KIOSK_DEBUG] Status: ${gira.status} | Ativo: ${gira.ativo}');
+    debugPrint('[KIOSK_DEBUG] Horário Kiosk: ${gira.horarioKiosk}');
+
+    // Se o usuário já abriu a gira MANUALMENTE no Admin, o Kiosk libera imediatamente.
+    if (gira.isAberta) {
+      debugPrint('[KIOSK_DEBUG] Gira está ABERTA ou ATIVA. Liberando...');
+      return true;
+    }
+
+    // Regra de Horário: Se ainda não foi aberta manualmente, respeitamos o horário programado.
+    try {
+      if (gira.horarioKiosk.isEmpty) {
+        debugPrint('[KIOSK_DEBUG] Horário Kiosk VAZIO.');
+        return false;
+      }
+      
+      final now = DateTime.now();
+      final timeParts = gira.horarioKiosk.split(':');
+      if (timeParts.length != 2) return false;
+      
+      final openTime = DateTime(
+        now.year, now.month, now.day, 
+        int.parse(timeParts[0]), 
+        int.parse(timeParts[1])
+      );
+      
+      final isOpen = now.isAfter(openTime);
+      debugPrint('[KIOSK_DEBUG] Hora Atual: $now | Hora Abertura: $openTime');
+      debugPrint('[KIOSK_DEBUG] Resultado Horário: $isOpen');
+      
+      return isOpen;
+    } catch (e) {
+      debugPrint('[KIOSK_DEBUG] ERRO no parse de horário: $e');
+      return false;
+    }
+  }
+
+  Widget _buildLandingState(Gira? gira) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           "Bem vindos",
-          style: GoogleFonts.outfit(
+          style: TextStyle(fontFamily: "Roboto", 
             fontSize: 80,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            shadows: [
+              Shadow(blurRadius: 10, color: Colors.black, offset: Offset(2, 2)),
+            ],
           ),
         ),
         const SizedBox(height: 40),
@@ -126,6 +194,8 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
         const SizedBox(height: 60),
         ElevatedButton(
           onPressed: () {
+            // MODO DIAGNÓSTICO: aceita qualquer gira, ou cria uma mock se não existir
+            // TODO: Restaurar validação de horário após diagnóstico
             setState(() {
               _showEntitySelection = true;
             });
@@ -142,7 +212,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
           ),
           child: Text(
             "Senha",
-            style: GoogleFonts.outfit(
+            style: TextStyle(fontFamily: "Roboto", 
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -160,30 +230,30 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
           child: Image.asset('assets/images/logo.png', height: 120),
         ),
         const SizedBox(height: 20),
-        Text("T.U.C.P.B.", style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white)),
-        Text("Token System", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white70, letterSpacing: 2)),
+        Text("T.U.C.P.B.", style: TextStyle(fontFamily: "Roboto", fontSize: 48, fontWeight: FontWeight.bold, color: Colors.brown[900])),
+        Text("Token System", style: TextStyle(fontFamily: "Roboto", fontSize: 24, color: Colors.brown[600], letterSpacing: 2)),
         const SizedBox(height: 40),
-        Icon(Icons.lock_clock, size: 80, color: Colors.white24),
+        Icon(Icons.lock_clock, size: 80, color: Colors.brown[200]),
         const SizedBox(height: 20),
-        Text("TERREIRO FECHADO", style: GoogleFonts.outfit(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white54)),
-        Text("Aguarde a abertura da Gira.", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white24)),
+        Text("TERREIRO FECHADO", style: TextStyle(fontFamily: "Roboto", fontSize: 40, fontWeight: FontWeight.bold, color: Colors.brown[900])),
+        Text("Aguarde a abertura da Gira.", style: TextStyle(fontFamily: "Roboto", fontSize: 24, color: Colors.brown[400])),
       ],
     );
   }
 
   Widget _buildOpenState(Gira gira) {
-    const terreiroId = 'demo-terreiro';
+    const terreiroId = '';
     final activeMediumsAsync = ref.watch(activeMediumsProvider(terreiroId));
 
     return Column(
       children: [
         // Top Bar con Botón Volver y Título
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black, size: 40),
+                icon: const Icon(Icons.arrow_back, color: Colors.black, size: 30),
                 onPressed: () {
                   if (_selectedTipo != null) {
                     setState(() => _selectedTipo = null);
@@ -194,14 +264,17 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                   }
                 },
               ),
-              const SizedBox(width: 20),
-              Text(
-                _selectedLine == null 
-                    ? "Escolha a linha para seu atendimento:" 
-                    : (_selectedTipo == null 
-                        ? "Escolha para qual parte da Gira é a senha:" 
-                        : "Escolha o guia para seu atendimento:"),
-                style: GoogleFonts.outfit(fontSize: 48, color: Colors.black, fontWeight: FontWeight.bold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _selectedLine == null 
+                      ? "Escolha a linha:" 
+                      : (_selectedTipo == null 
+                          ? "Escolha a parte da Gira:" 
+                          : "Escolha o guia:"),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: 22, color: Colors.black, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -214,45 +287,36 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
             child: activeMediumsAsync.when(
               data: (mediums) {
                 if (mediums.isEmpty) {
-                  return Center(child: Text("Nenhuma entidade disponível no momento.", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white38)));
+                  return Center(child: Text("Nenhuma entidade disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
                 }
 
                 if (_selectedLine == null) {
-                  // Usar a lógica de grupos de linhas para filtrar o que deve aparecer
-                  final allowedGiraLines = _giraLineGroups[gira.linha] ?? [gira.linha];
-                  
-                  // Buscar todas as linhas disponíveis dos médiuns presentes que pertencem ao grupo da Gira
-                  final lines = mediums
-                    .map((m) => m.entity.linha)
-                    .where((linha) => allowedGiraLines.contains(linha))
-                    .toSet()
-                    .toList();
-                  lines.sort();
-                  
-                  // Se a linha da gira tem médiuns, pode ir direto para entidades
-                  if (lines.length == 1) {
-                    // Apenas uma linha disponível, pular seleção de linha
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && _selectedLine == null) {
-                        setState(() => _selectedLine = lines.first);
-                      }
-                    });
-                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
+                  // ETAPA 1: Mostrar seleção de linha
+                  List<String> lines;
+                  if (gira.linha.isEmpty) {
+                    lines = mediums
+                        .map((m) => m.entity.linha)
+                        .where((l) => l.isNotEmpty)
+                        .toSet()
+                        .toList()
+                      ..sort();
+                  } else {
+                    final allowedGiraLines = _giraLineGroups[gira.linha] ?? [gira.linha];
+                    lines = mediums
+                        .map((m) => m.entity.linha)
+                        .where((l) => l.isNotEmpty && allowedGiraLines.any((a) => a.toUpperCase() == l.toUpperCase()))
+                        .toSet()
+                        .toList()
+                      ..sort();
                   }
-                  
+
                   if (lines.isEmpty) {
-                    final allLines = mediums.map((m) => m.entity.linha).toSet().toList()..sort();
-                    // Nenhum médium da linha da gira está presente
-                    // Mostrar todas as linhas disponíveis como fallback
-                    if (allLines.isEmpty) {
-                      return Center(child: Text("Nenhuma entidade disponível para a linha '${gira.linha}'.", style: GoogleFonts.outfit(fontSize: 24, color: Colors.white38)));
-                    }
-                    return Wrap(
-                      spacing: 30,
-                      runSpacing: 30,
-                      alignment: WrapAlignment.center,
-                      children: allLines.map((line) => _buildLineButton(line)).toList(),
-                    );
+                    // Fallback: mostrar todas as linhas disponíveis
+                    lines = mediums.map((m) => m.entity.linha).where((l) => l.isNotEmpty).toSet().toList()..sort();
+                  }
+
+                  if (lines.isEmpty) {
+                    return Center(child: Text("Nenhuma linha disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
                   }
 
                   return Wrap(
@@ -261,42 +325,29 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                     alignment: WrapAlignment.center,
                     children: lines.map((line) => _buildLineButton(line)).toList(),
                   );
+
                 } else if (_selectedTipo == null) {
-                  // Verificar se esta linha EXIGE a escolha de Tipo (apenas Esquerda e Boiadeiro)
-                  final bool mustChooseTipo = _selectedLine == 'Esquerda' || _selectedLine == 'Boiadeiro';
-                  
-                  final filteredByLine = mediums.where((m) => m.entity.linha == _selectedLine).toList();
-                  final availableTipos = filteredByLine.map((m) => m.entity.tipo).toSet().toList();
-                  availableTipos.sort();
+                  // ETAPA 2 (automática): Definir tipo como ALL e ir para entidades
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _selectedTipo == null) {
+                      setState(() => _selectedTipo = 'ALL');
+                    }
+                  });
+                  return const Center(child: CircularProgressIndicator(color: Colors.amber));
 
-                  if (!mustChooseTipo || availableTipos.length <= 1) {
-                    // Se não exige escolha de tipo OU só tem um tipo, pula direto para entidades
-                    final singleTipo = availableTipos.isNotEmpty ? availableTipos.first : '';
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && _selectedTipo == null) {
-                        setState(() => _selectedTipo = singleTipo.isEmpty ? 'ALL' : singleTipo);
-                      }
-                    });
-                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
-                  }
-
-                  return Wrap(
-                    spacing: 30,
-                    runSpacing: 30,
-                    alignment: WrapAlignment.center,
-                    children: availableTipos.map((tipo) => _buildTipoButton(tipo)).toList(),
-                  );
                 } else {
-                  // Mostrar Grid de ENTIDADES daquela linha
-                  // Se o tipo for 'ALL', mostramos todos da linha
-                  final filteredMediums = mediums.where((m) => 
-                     m.entity.linha == _selectedLine && 
-                     (_selectedTipo == 'ALL' || m.entity.tipo == _selectedTipo)
+                  // ETAPA 3: Mostrar entidades da linha selecionada
+                  final filteredMediums = mediums.where((m) =>
+                    m.entity.linha.toUpperCase() == (_selectedLine ?? '').toUpperCase()
                   ).toList();
-                  
+
                   Map<String, List<({Medium medium, Entidade entity})>> entityMap = {};
                   for (var pair in filteredMediums) {
                     entityMap.putIfAbsent(pair.entity.nome, () => []).add(pair);
+                  }
+
+                  if (entityMap.isEmpty) {
+                    return Center(child: Text("Nenhum guia disponível para '${_selectedLine}'.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
                   }
 
                   return Wrap(
@@ -313,7 +364,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 }
               },
               loading: () => const Center(child: CircularProgressIndicator(color: Colors.amber)),
-              error: (e, s) => Center(child: Text("Erro: $e", style: const TextStyle(color: Colors.red))),
+              error: (e, s) => Center(child: Text("Erro ao carregar: $e", style: const TextStyle(color: Colors.red))),
             ),
           ),
         ),
@@ -335,11 +386,11 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                const SizedBox(height: 10),
                Text(
                  "Tenda de Umbanda",
-                 style: GoogleFonts.outfit(color: Colors.black.withOpacity(0.7), fontSize: 24, fontWeight: FontWeight.bold),
+                 style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.7), fontSize: 24, fontWeight: FontWeight.bold),
                ),
                Text(
                  "Caboclo Pena Branca e Tupi, Ogum Rompe Mato e Beira Mar & Mãe Maria da Guia",
-                 style: GoogleFonts.outfit(color: Colors.black.withOpacity(0.6), fontSize: 18),
+                 style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.6), fontSize: 18),
                ),
             ],
           ),
@@ -374,16 +425,24 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _lineImages.containsKey(line)
-                    ? ClipRRect(
+                  child: () {
+                    final normalizedKey = line.toUpperCase()
+                        .replaceAll('Á', 'A').replaceAll('É', 'E').replaceAll('Í', 'I').replaceAll('Ó', 'O').replaceAll('Ú', 'U')
+                        .replaceAll('Â', 'A').replaceAll('Ê', 'E').replaceAll('Î', 'I').replaceAll('Ô', 'O').replaceAll('Û', 'U')
+                        .replaceAll('Ã', 'A').replaceAll('Õ', 'O').replaceAll('Ç', 'C');
+                    
+                    if (_lineImages.containsKey(normalizedKey)) {
+                      return ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.asset(
-                          _lineImages[line]!,
+                          _lineImages[normalizedKey]!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Icon(_lineIcons[line] ?? Icons.person_outline, size: 180, color: Colors.grey[700]),
                         ),
-                      )
-                    : Icon(_lineIcons[line] ?? Icons.person_outline, size: 180, color: Colors.grey[700]),
+                      );
+                    }
+                    return Icon(_lineIcons[line] ?? Icons.person_outline, size: 180, color: Colors.grey[700]);
+                  }(),
                 ),
               ),
               Container(
@@ -396,7 +455,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 child: Text(
                   line,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
                 ),
               ),
             ],
@@ -454,7 +513,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 child: Text(
                   tipo,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
                 ),
               ),
             ],
@@ -473,7 +532,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
           padding: const EdgeInsets.only(left: 12.0, bottom: 4.0),
           child: Text(
             medium.nome,
-            style: GoogleFonts.outfit(
+            style: TextStyle(fontFamily: "Roboto", 
               fontSize: 20,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -501,7 +560,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
               child: Text(
                 entityName.toUpperCase(),
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
+                style: TextStyle(fontFamily: "Roboto", 
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF4A2C2A), // Cor marrom escura da foto
@@ -519,32 +578,35 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text("Confirmar Senha", style: TextStyle(color: Colors.white)),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text("Confirmar Senha", style: TextStyle(color: Colors.brown[900], fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Deseja retirar senha para:", style: TextStyle(color: Colors.white70)),
+            Text("Deseja retirar senha para:", style: TextStyle(color: Colors.brown[700])),
             const SizedBox(height: 10),
-            Text(entityName, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.amber)),
+            Text(entityName, style: TextStyle(fontFamily: "Roboto", fontSize: 28, fontWeight: FontWeight.bold, color: Colors.brown[900])),
             const SizedBox(height: 20),
-            Text("Médium: ${medium.nome}", style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            Text("Médium: ${medium.nome}", style: TextStyle(color: Colors.brown[400], fontSize: 14)),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CANCELAR", style: TextStyle(color: Colors.white54)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text("CANCELAR", style: TextStyle(color: Colors.brown[300])),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.brown[900],
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
-              Navigator.pop(context); // Close dialog
+              Navigator.pop(dialogContext); // Fecha o diálogo usando o contexto do diálogo
+              // Usa o contexto ORIGINAL da KioskScreen para processar o ticket
               await _processTicket(context, ref, terreiroId, gira, entityName, entityId, medium);
             },
             child: const Text("CONFIRMAR E IMPRIMIR"),
@@ -572,7 +634,12 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
 
       if (!context.mounted) return;
 
-      debugPrint("Ticket issued: ${ticket.codigoSenha}");
+      debugPrint("[KIOSK] Ticket issued logic START for ${ticket.codigoSenha}");
+
+      if (!context.mounted) {
+        debugPrint("[KIOSK] Context NOT mounted after issueTicket");
+        return;
+      }
 
       setState(() {
         _lastIssuedTicket = ticket;
@@ -580,24 +647,31 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
         _lastIssuedGira = gira;
       });
 
-      // Show success briefly even if printer fails
-      debugPrint("Starting print process...");
+      debugPrint("[KIOSK] State updated. Starting print process...");
 
       // Print
-      final printer = ref.read(printerServiceProvider);
-      final mediumInitials = medium.nome.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join().toUpperCase();
-      await printer.printTicket(
-        terreiroName: "T.U.C.P.B. Token",
-        giraName: gira.tema,
-        entityName: entityName,
-        mediumName: medium.nome,
-        mediumInitials: mediumInitials,
-        ticketCode: ticket.codigoSenha,
-        pixKey: "12345678900",
-        date: ticket.dataHoraEmissao,
-      );
+      try {
+        final printer = ref.read(printerServiceProvider);
+        final mediumInitials = medium.nome.split(' ').where((n) => n.isNotEmpty).map((n) => n[0]).take(2).join().toUpperCase();
+        
+        debugPrint("[KIOSK] Calling printer.printTicket for ${ticket.codigoSenha}...");
+        
+        await printer.printTicket(
+          terreiroName: "T.U.C.P.B.",
+          giraName: gira.tema,
+          entityName: entityName,
+          mediumName: medium.nome,
+          mediumInitials: mediumInitials,
+          ticketCode: ticket.codigoSenha,
+          pixKey: "12345678900",
+          date: ticket.dataHoraEmissao,
+        );
+        debugPrint("[KIOSK] printer.printTicket call FINISHED.");
+      } catch (printErr) {
+        debugPrint("[KIOSK] EXCEPTION during print scan: $printErr");
+      }
 
-      debugPrint("Print process completed.");
+      debugPrint("[KIOSK] Final step of _processTicket reached.");
 
       // Voltar para a tela inicial após 15 segundos (um pouco mais de tempo)
       Future.delayed(const Duration(seconds: 15), () {
@@ -635,103 +709,41 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
   }
 
   Widget _buildTicketSuccessState(Ticket ticket, Gira gira, String entityName) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Retire sua senha!",
-              style: GoogleFonts.outfit(
-                fontSize: 64,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            "Sua senha é:",
+            style: TextStyle(
+              fontFamily: "Roboto",
+              fontSize: 48,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
-            const SizedBox(height: 40),
-            
-            // Ticket Card
-            Container(
-              width: 600,
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                   Text(
-                    "Gira de ${gira.tema}", // Usar tema em vez de linha para ser mais específico
-                    style: GoogleFonts.outfit(fontSize: 24, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    entityName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    DateFormat('dd/MM/yyyy').format(ticket.dataHoraEmissao),
-                    style: GoogleFonts.outfit(fontSize: 22, color: Colors.black54),
-                  ),
-                  Text(
-                    DateFormat('HH:mm').format(ticket.dataHoraEmissao),
-                    style: GoogleFonts.outfit(fontSize: 22, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 60),
-                  Text(
-                    ticket.codigoSenha,
-                    style: GoogleFonts.outfit(
-                      fontSize: 140,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                      letterSpacing: -5,
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  Text(
-                    "Tenda de umbanda Caboclo Pena Branca e Tupi, Sr Ogum Rompe Mato e Beira Mar & Mãe Maria da Guia",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.black45),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            ticket.codigoSenha,
+            style: TextStyle(
+              fontFamily: "Roboto",
+              fontSize: 70, // 50% menor que os 140 originais
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
             ),
-            
-            const SizedBox(height: 60),
-            Text(
-              "Agradecemos sua presença!",
-              style: GoogleFonts.outfit(
-                fontSize: 48,
-                fontStyle: FontStyle.italic,
-                color: Colors.black87,
-              ),
+          ),
+          const SizedBox(height: 60),
+          Text(
+            "Aguarde a impressão total!",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: "Roboto",
+              fontSize: 56,
+              fontWeight: FontWeight.bold,
+              color: Colors.brown[900],
             ),
-            const SizedBox(height: 10),
-            Text(
-              "Axé!",
-              style: GoogleFonts.outfit(
-                fontSize: 56,
-                fontStyle: FontStyle.italic,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

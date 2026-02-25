@@ -131,7 +131,7 @@ class _ItemCard extends ConsumerWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: _qtdColor.withOpacity(0.3), width: item.precisaComprar ? 2 : 1),
+        side: BorderSide(color: _qtdColor.withValues(alpha: 0.3), width: item.precisaComprar ? 2 : 1),
       ),
       color: item.zerado
           ? Colors.red[50]
@@ -344,7 +344,7 @@ class _EntradaModalState extends ConsumerState<EntradaModal> {
               if (_itemExistente != null)
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: cat.color.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: cat.color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
                   child: Row(children: [
                     Icon(Icons.inventory_2, color: cat.color, size: 18),
                     const SizedBox(width: 8),
@@ -387,7 +387,7 @@ class _EntradaModalState extends ConsumerState<EntradaModal> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _unidade,
+                    initialValue: _unidade,
                     decoration: const InputDecoration(labelText: 'Unidade', border: OutlineInputBorder()),
                     items: kUnidadesEstoque.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                     onChanged: _itemExistente != null ? null : (v) => setState(() => _unidade = v!),
@@ -777,7 +777,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(categoria.icon, size: 72, color: categoria.color.withOpacity(0.3)),
+          Icon(categoria.icon, size: 72, color: categoria.color.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text('Nenhum item no ${categoria.label}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 8),

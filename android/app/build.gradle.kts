@@ -23,25 +23,37 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.terreiro.terreiro_queue_system"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        ndk {
+            // Support both 32 and 64 bit ARM (Gertec SK-210 is 32-bit)
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+        }
+
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // KEEP Minify disabled to ensure 100% classes from plugin are preserved
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Including Gertec SDK files manually to ensure they are bundled in the final APK.
+    // The plugin uses 'compileOnly', and the App provides the actual implementation.
+    implementation(fileTree("libs") { include("*.aar", "*.jar") })
 }

@@ -9,6 +9,7 @@ import 'package:tucpb_adm/src/features/admin/presentation/widgets/novo_cadastro_
 import 'package:tucpb_adm/src/features/admin/presentation/cadastro/novo_cadastro_modal_final.dart';
 import 'package:tucpb_adm/src/features/admin/data/log_repository.dart';
 import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
+import 'package:tucpb_adm/src/features/admin/presentation/cadastro/cadastro_excel_import.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:go_router/go_router.dart';
@@ -135,21 +136,27 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                     Text("Gerencie os membros da casa", style: TextStyle(color: AdminTheme.textSecondary)),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => const NovoCadastroModalFinal(),
-                    );
-                  },
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text("Novo Cadastro"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AdminTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
+                Row(
+                  children: [
+                    const BotoesImportExcelCadastro(),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const NovoCadastroModalFinal(),
+                        );
+                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text("Novo Cadastro"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AdminTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -223,7 +230,40 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                     // Processar dados e filtros
                     var docs = snapshot.data!.docs;
                     
-                    // Filtrar
+                    // 1. Calcular IDs por Antiguidade (Data de Entrada)
+                    // Criamos uma lista temporária para ordenação por entrada
+                    final List<Map<String, dynamic>> allData = docs.map((d) {
+                      final map = d.data() as Map<String, dynamic>;
+                      map['docId'] = d.id;
+                      return map;
+                    }).toList();
+
+                    DateTime parseEntrada(Map<String, dynamic> data) {
+                      // Tentar Timestamp top-level
+                      if (data['dataEntrada'] is Timestamp) {
+                        return (data['dataEntrada'] as Timestamp).toDate();
+                      }
+                      // Tentar espiritual.entrada (String dd/MM/yyyy)
+                      final espiritual = data['espiritual'];
+                      if (espiritual != null && espiritual['entrada'] != null) {
+                        final entradaStr = espiritual['entrada'].toString();
+                        try {
+                          return DateFormat('dd/MM/yyyy').parse(entradaStr);
+                        } catch (_) {}
+                      }
+                      return DateTime(2100); // Se não tiver data, joga pro final
+                    }
+
+                    // Ordenar por antiguidade
+                    allData.sort((a, b) => parseEntrada(a).compareTo(parseEntrada(b)));
+
+                    // Criar mapa de IDs Formatados (001, 002...)
+                    final Map<String, String> idMap = {};
+                    for (int i = 0; i < allData.length; i++) {
+                      idMap[allData[i]['docId']] = (i + 1).toString().padLeft(3, '0');
+                    }
+
+                    // 2. Aplicar Filtros (Busca e Status)
                     var filteredDocs = docs.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       final nome = (data['nome'] ?? '').toString().toLowerCase();
@@ -237,6 +277,13 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                       return matchesSearch && matchesStatus;
                     }).toList();
 
+                    // 3. Ordenação Final: Alfabética por Nome (conforme solicitado)
+                    filteredDocs.sort((a, b) {
+                      final nomeA = (a.data() as Map<String, dynamic>)['nome'] ?? '';
+                      final nomeB = (b.data() as Map<String, dynamic>)['nome'] ?? '';
+                      return nomeA.toString().compareTo(nomeB.toString());
+                    });
+
                     if (filteredDocs.isEmpty) {
                       return const Center(child: Text("Nenhum cadastro encontrado."));
                     }
@@ -247,6 +294,8 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                       minWidth: 800,
                       headingRowColor: MaterialStateProperty.all(Colors.grey.withOpacity(0.05)),
                       columns: [
+                        const DataColumn2(label: Text(""), fixedWidth: 50),
+                        const DataColumn2(label: Text("ID"), fixedWidth: 60),
                         const DataColumn2(label: Text("Nome"), size: ColumnSize.L),
                         const DataColumn(label: Text("Perfil")),
                         const DataColumn(label: Text("Data Entrada")),
@@ -258,16 +307,40 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                       rows: filteredDocs.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
                         final bool isAtivo = data['ativo'] == true;
-                        final String nome = data['nome'] ?? 'Sem Nome';
+                        final String rawNome = data['nome'] ?? 'Sem Nome';
+                        final String sequentialId = idMap[doc.id] ?? '???';
+                        final String nomeCompId = "[$sequentialId] $rawNome";
+                        
                         final String perfil = data['perfil'] ?? 'Membro';
-                        final Timestamp? dtEntradaTs = data['dataEntrada'];
-                        final String dtEntrada = dtEntradaTs != null 
-                            ? DateFormat('dd/MM/yyyy').format(dtEntradaTs.toDate()) 
-                            : '--';
+                        
+                        // Lógica de exibição da data de entrada
+                        String dtEntrada = '--';
+                        if (data['dataEntrada'] is Timestamp) {
+                          dtEntrada = DateFormat('dd/MM/yyyy').format((data['dataEntrada'] as Timestamp).toDate());
+                        } else if (data['espiritual']?['entrada'] != null) {
+                          dtEntrada = data['espiritual']['entrada'].toString();
+                        }
+
                         final String dtSaida = '--'; // TODO: Implementar campo de saída no futuro
 
                         return DataRow(cells: [
-                          DataCell(Text(nome, style: const TextStyle(fontWeight: FontWeight.bold))),
+                          DataCell(
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AdminTheme.secondary.withValues(alpha: 0.1),
+                              backgroundImage: data['fotoUrl'] != null 
+                                  ? NetworkImage(data['fotoUrl']) 
+                                  : null,
+                              child: data['fotoUrl'] == null 
+                                  ? Text(
+                                      rawNome.isNotEmpty ? rawNome[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AdminTheme.secondary),
+                                    ) 
+                                  : null,
+                            ),
+                          ),
+                          DataCell(Text(sequentialId)),
+                          DataCell(Text(rawNome, style: const TextStyle(fontWeight: FontWeight.bold))),
                           DataCell(Text(perfil)),
                           DataCell(Text(dtEntrada)),
                           if (_filterStatus == "Inativos" || _filterStatus == "Todos")
@@ -308,7 +381,7 @@ class _CadastrosScreenState extends ConsumerState<CadastrosScreen> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete, size: 20, color: Colors.red), 
-                                onPressed: () => _deleteUser(doc.id, nome), 
+                                onPressed: () => _deleteUser(doc.id, rawNome), 
                                 tooltip: "Excluir"
                               ),
                             ],

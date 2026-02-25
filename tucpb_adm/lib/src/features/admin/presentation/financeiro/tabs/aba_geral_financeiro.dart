@@ -10,8 +10,8 @@ import 'package:tucpb_adm/src/features/admin/data/activity_log_model.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
 
-final _totaisProvider = StreamProvider<Map<String, double>>((ref) {
-  return ref.watch(cobrancasStreamProvider.stream).map((lista) {
+final _totaisProvider = StreamProvider<Map<String, double>>((ref) async* {
+  yield* ref.watch(cobrancasStreamProvider.stream).map((lista) {
     double totalPago = 0;
     double totalAvulso = 0;
     double totalAsaas = 0;
@@ -99,7 +99,7 @@ class _AbaGeralState extends ConsumerState<AbaGeral> {
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String?>(
-                  value: _filtroStatus,
+                  initialValue: _filtroStatus,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -141,7 +141,7 @@ class _AbaGeralState extends ConsumerState<AbaGeral> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
                   ),
                   child: Column(
                     children: [
@@ -258,9 +258,9 @@ class _BigCard extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +274,7 @@ class _BigCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(value, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-          if (sub != null) Text(sub!, style: TextStyle(color: color.withOpacity(0.6), fontSize: 10)),
+          if (sub != null) Text(sub!, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10)),
         ],
       ),
     );

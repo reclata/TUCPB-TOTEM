@@ -1301,9 +1301,12 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
                 };
                 final allowedLines = lineGroups[gira.linha] ?? [gira.linha];
 
-                // Filtrar apenas médiuns que têm entidades compatíveis com esta gira
+                // Filtrar apenas médiuns que têm entidades compatíveis com esta gira (Case-insensitive)
                 final compatibleMediums = mediums.where((m) {
-                  return m.entidades.any((e) => allowedLines.contains(e.linha));
+                  return m.entidades.any((e) {
+                    final entLinha = e.linha.toUpperCase();
+                    return allowedLines.any((al) => al.toUpperCase() == entLinha);
+                  });
                 }).toList();
 
                 if (compatibleMediums.isEmpty) {
@@ -1317,11 +1320,27 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
                     final medium = compatibleMediums[index];
                     final isPresent = currentPresencas[medium.id] ?? false;
                     
+                    final compatibleEntidades = medium.entidades.where((e) {
+                      final entLinha = e.linha.toUpperCase();
+                      return allowedLines.any((al) => al.toUpperCase() == entLinha);
+                    }).toList();
+
                     return SwitchListTile(
-                      title: Text(medium.nome),
-                      subtitle: Text(medium.entidades
-                        .where((e) => allowedLines.contains(e.linha))
-                        .map((e) => e.entidadeNome).join(', ')),
+                      title: Text(medium.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      secondary: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.brown[100],
+                        backgroundImage: medium.fotoUrl.isNotEmpty ? NetworkImage(medium.fotoUrl) : null,
+                        child: medium.fotoUrl.isEmpty 
+                            ? Text(medium.nome.isNotEmpty ? medium.nome[0].toUpperCase() : '?')
+                            : null,
+                      ),
+                      subtitle: Text(
+                        compatibleEntidades.isNotEmpty 
+                            ? "Entidade: ${compatibleEntidades.map((e) => e.entidadeNome).join(', ')}" 
+                            : "Nenhuma entidade compatível",
+                        style: TextStyle(color: Colors.brown[600], fontSize: 13),
+                      ),
                       value: isPresent,
                       onChanged: (val) {
                         setDialogState(() => currentPresencas[medium.id] = val);
@@ -1700,12 +1719,12 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                       color: hasGira ? statusColor : (isToday ? Colors.brown[50] : Colors.white),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isToday ? Colors.brown : Colors.grey[200]!,
+                        color: isToday ? Colors.brown : (Colors.grey[200] ?? Colors.grey),
                         width: isToday ? 2 : 1,
                       ),
-                      boxShadow: hasGira ? [
+                      boxShadow: hasGira && statusColor != null ? [
                         BoxShadow(
-                          color: statusColor!.withOpacity(0.3),
+                          color: statusColor.withOpacity(0.3),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         )
@@ -1719,12 +1738,12 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           padding: const EdgeInsets.only(left: 8, top: 6),
                           child: Text(
                             '$dayNumber',
-                            style: GoogleFonts.outfit(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: (isToday || hasGira) ? FontWeight.bold : FontWeight.w500,
                               color: hasGira 
                                 ? Colors.white 
-                                : (isPast && dayGiras.isEmpty ? Colors.grey[400] : Colors.brown[800]),
+                                : (isPast && dayGiras.isEmpty ? (Colors.grey[400] ?? Colors.grey) : Colors.brown[800]),
                             ),
                           ),
                         ),
@@ -1816,12 +1835,11 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final registeredLinhas = linhasAsync.value ?? [];
-    // Unificar LINHA_OPTIONS com as linhas já registradas nos médiuns
+    final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
     final dropdownItems = {
       ...LINHA_OPTIONS,
       ...registeredLinhas,
-    }.toList();
+    }.where((l) => l.isNotEmpty).toList();
     dropdownItems.sort();
     
     // Buscar todos os médiuns
@@ -1832,20 +1850,50 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          final Map<String, List<String>> lineGroups = {
+            'BOIADEIRO': ['BOIADEIRO', 'MARINHEIRO', 'MALANDRO', 'VAQUEIRO'],
+            'ESQUERDA': ['ESQUERDA', 'EXU', 'POMBA GIRA', 'POMBO GIRO', 'EXU MIRIM'],
+            'PRETO VELHO': ['PRETO VELHO', 'PRETA VELHA', 'FEITICEIRO'],
+            'CABOCLO': ['CABOCLO', 'CABOCLA'],
+            'ERES': ['ERÊ', 'CRIANÇA'],
+            'BAIANO': ['BAIANO', 'BAIANA'],
+            'CIGANO': ['CIGANO', 'CIGANA'],
+          };
+
           // Quando a linha muda, pré-selecionar médiuns da linha
           void _onLinhaChanged(String? val) {
             selectedLinha = val;
             mediumsSelected.clear();
             if (val != null) {
+              final valUpper = val.toUpperCase();
+              final allowedLines = [valUpper];
+              
+              if (lineGroups.containsKey(valUpper)) {
+                allowedLines.addAll(lineGroups[valUpper]!);
+              }
+
               for (var m in allMediums.where((m) => m.ativo)) {
-                final hasLinha = m.entidades.any((e) => e.linha == val);
-                mediumsSelected[m.id] = hasLinha;
+                final hasCompatibleEntity = m.entidades.any((e) {
+                  final entLinha = e.linha.toUpperCase();
+                  return allowedLines.contains(entLinha);
+                });
+                mediumsSelected[m.id] = hasCompatibleEntity;
               }
             }
             setDialogState(() {});
           }
           
           final activeMediums = allMediums.where((m) => m.ativo).toList();
+          if (selectedLinha != null) {
+            // Ordenar: primeiro os que têm entidade para a linha selecionada
+            activeMediums.sort((a, b) {
+              final aSelected = mediumsSelected[a.id] ?? false;
+              final bSelected = mediumsSelected[b.id] ?? false;
+              if (aSelected && !bSelected) return -1;
+              if (!aSelected && bSelected) return 1;
+              return a.nome.compareTo(b.nome);
+            });
+          }
           
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1919,6 +1967,14 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         );
                       },
                     ),
+                    if (selectedLinha != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          "${mediumsSelected.values.where((v) => v).length} médiuns habilitados para esta linha",
+                          style: TextStyle(color: Colors.brown[400], fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     const SizedBox(height: 16),
 
                     // Nome da Gira
@@ -2114,24 +2170,26 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
   }
 
   void _showEditGiraDialog(Gira gira, String terreiroId) {
-    final temaCtrl = TextEditingController(text: gira.tema);
-    final horarioInicioCtrl = TextEditingController(text: gira.horarioInicio);
-    final horarioKioskCtrl = TextEditingController(text: gira.horarioKiosk);
+    final temaCtrl = TextEditingController(text: gira.tema ?? '');
+    final horarioInicioCtrl = TextEditingController(text: gira.horarioInicio ?? '19:00');
+    final horarioKioskCtrl = TextEditingController(text: gira.horarioKiosk ?? '18:00');
     final horarioEncerramentoCtrl = TextEditingController(text: gira.horarioEncerramentoKiosk ?? '20:00');
     final linhaCtrl = TextEditingController();
-    String selectedLinha = gira.linha;
-    String selectedStatus = gira.status;
-    DateTime selectedDate = gira.data;
-    bool encerramentoAtivo = gira.encerramentoKioskAtivo;
+    String selectedLinha = gira.linha ?? '';
+    
+    // Garantir que o status é um dos valores aceitos pelo Dropdown para evitar crash de build
+    const validStatuses = ['agendada', 'aberta', 'encerrada'];
+    String selectedStatus = validStatuses.contains(gira.status) ? gira.status : 'agendada';
+    DateTime selectedDate = gira.data ?? DateTime.now();
+    bool encerramentoAtivo = gira.encerramentoKioskAtivo ?? false;
     Map<String, bool> mediumsSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final registeredLinhas = linhasAsync.value ?? [];
-    // Unificar LINHA_OPTIONS com as linhas já registradas nos médiuns
+    final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
     final dropdownItems = {
       ...LINHA_OPTIONS,
       ...registeredLinhas,
-    }.toList();
+    }.where((l) => l.isNotEmpty).toList();
     dropdownItems.sort();
     
     // Buscar todos os médiuns
@@ -2139,27 +2197,62 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final allMediums = mediumsAsync.value ?? [];
     
     // Inicializar seleção com os participantes atuais
-    for (var m in allMediums.where((m) => m.ativo)) {
-      mediumsSelected[m.id] = gira.mediumsParticipantes.contains(m.id) || (gira.presencas[m.id] ?? false);
+    for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
+      mediumsSelected[m.id] = (gira.mediumsParticipantes ?? []).contains(m.id);
     }
+
+    final Map<String, List<String>> lineGroups = {
+      'BOIADEIRO': ['BOIADEIRO', 'MARINHEIRO', 'MALANDRO', 'VAQUEIRO'],
+      'ESQUERDA': ['ESQUERDA', 'EXU', 'POMBA GIRA', 'POMBO GIRO', 'EXU MIRIM'],
+      'PRETO VELHO': ['PRETO VELHO', 'PRETA VELHA', 'FEITICEIRO'],
+      'CABOCLO': ['CABOCLO', 'CABOCLA'],
+      'ERES': ['ERÊ', 'CRIANÇA'],
+      'BAIANO': ['BAIANO', 'BAIANA'],
+      'CIGANO': ['CIGANO', 'CIGANA'],
+    };
     
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          final activeMediums = allMediums.where((m) => m.ativo).toList();
-
+          // Quando a linha muda, atualizar pré-seleção sugerida
           void _onLinhaChanged(String? val) {
-            if (val != null) {
-              setDialogState(() {
-                selectedLinha = val;
-                // Pré-selecionar médiuns da nova linha
-                for (var m in activeMediums) {
-                  final hasLinha = m.entidades.any((e) => e.linha == val);
-                  if (hasLinha) mediumsSelected[m.id] = true;
+            selectedLinha = val ?? '';
+            if (val != null && val.isNotEmpty) {
+              final valUpper = val.toUpperCase();
+              final allowedLines = [valUpper];
+              if (lineGroups.containsKey(valUpper)) {
+                allowedLines.addAll(lineGroups[valUpper]!);
+              }
+
+              for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
+                final hasCompatibleEntity = (m.entidades ?? []).any((e) {
+                  final entLinha = (e.linha ?? '').toUpperCase();
+                  return allowedLines.contains(entLinha);
+                });
+                if (hasCompatibleEntity) {
+                   mediumsSelected[m.id] = true;
                 }
-              });
+              }
             }
+            setDialogState(() {});
+          }
+
+          final activeMediums = (allMediums ?? []).where((m) => m != null && m.ativo).toList();
+          if (selectedLinha.isNotEmpty) {
+            final valUpper = selectedLinha.toUpperCase();
+            final allowedLines = [valUpper];
+            if (lineGroups.containsKey(valUpper)) {
+              allowedLines.addAll(lineGroups[valUpper]!);
+            }
+
+            activeMediums.sort((a, b) {
+              final aHas = (a.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
+              final bHas = (b.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
+              if (aHas && !bHas) return -1;
+              if (!aHas && bHas) return 1;
+              return (a.nome ?? '').compareTo(b.nome ?? '');
+            });
           }
           
           return AlertDialog(
@@ -2170,7 +2263,38 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text('Editar Gira',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: ctx,
+                      builder: (confirmCtx) => AlertDialog(
+                        title: const Text('Confirmar exclusão'),
+                        content: Text('Deseja excluir a gira "${gira.tema}"?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(confirmCtx), child: const Text('CANCELAR')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                            onPressed: () async {
+                              final repo = ref.read(adminRepositoryProvider);
+                              if (repo != null) {
+                                await repo.deleteGira(gira.id);
+                              }
+                              if (confirmCtx.mounted) Navigator.pop(confirmCtx);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Gira excluída'), backgroundColor: Colors.orange),
+                              );
+                            },
+                            child: const Text('EXCLUIR'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+                  label: const Text('EXCLUIR', style: TextStyle(color: Colors.red, fontSize: 12)),
                 ),
               ],
             ),
@@ -2228,39 +2352,41 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           ],
                         ),
                       )).toList(),
-                      onChanged: (val) => setDialogState(() => selectedStatus = val!),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedStatus = val);
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
 
-                    // Linha Principal - Autocomplete editável
-                    Autocomplete<String>(
-                      initialValue: TextEditingValue(text: selectedLinha),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return dropdownItems;
-                        return dropdownItems.where((l) =>
-                          l.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                      },
-                      onSelected: (val) => _onLinhaChanged(val),
-                      fieldViewBuilder: (ctx2, controller, focusNode, onFieldSubmitted) {
-                        return TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            labelText: "Linha Principal",
-                            hintText: "Selecione ou digite",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            prefixIcon: const Icon(Icons.auto_awesome),
-                          ),
-                          onChanged: (val) {
-                            if (val.isNotEmpty) {
-                              _onLinhaChanged(val);
-                            }
-                          },
-                          onSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      },
+                    // Linha Principal - Simples para estabilidade
+                    TextField(
+                      controller: TextEditingController(text: selectedLinha),
+                      decoration: InputDecoration(
+                        labelText: "Linha Principal",
+                        hintText: "Digite a linha",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.auto_awesome),
+                      ),
+                      onChanged: (val) => _onLinhaChanged(val),
                     ),
                     const SizedBox(height: 16),
+                    if (selectedLinha.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          "${activeMediums.where((m) {
+                            final valUpper = selectedLinha.toUpperCase();
+                            final allowedLines = [valUpper];
+                            if (lineGroups.containsKey(valUpper)) {
+                              allowedLines.addAll(lineGroups[valUpper]!);
+                            }
+                            return (m.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
+                          }).length} médiuns habilitados para esta linha",
+                          style: TextStyle(color: Colors.brown[400], fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
 
                     // Nome da Gira
                     TextField(
@@ -2292,7 +2418,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           child: TextField(
                             controller: horarioKioskCtrl,
                             decoration: InputDecoration(
-                              labelText: "Liberação Kiosk",
+                              labelText: "Início Emissão Senhas (Kiosk)",
                               hintText: "18:00",
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               prefixIcon: const Icon(Icons.tablet_android, size: 20),
@@ -2344,7 +2470,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
 
                     // Médiuns Participantes
                     Text("Médiuns Participantes",
-                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.brown[700]),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.brown[700]),
                     ),
                     const SizedBox(height: 8),
                     if (activeMediums.isEmpty)
@@ -2365,11 +2491,16 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         child: Column(
                           children: activeMediums.map((m) {
                             final isSelected = mediumsSelected[m.id] ?? false;
-                            final linhas = m.entidades.map((e) => e.linha).toSet().join(', ');
+                            final listEntidades = m.entidades ?? <MediumEntidade>[];
+                            final linhas = listEntidades
+                                .map((e) => e?.linha ?? '')
+                                .where((l) => l.isNotEmpty)
+                                .toSet()
+                                .join(', ');
                             return CheckboxListTile(
                               dense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              title: Text(m.nome, style: const TextStyle(fontSize: 14)),
+                              title: Text(m.nome ?? 'Sem nome', style: const TextStyle(fontSize: 14)),
                               subtitle: Text(linhas, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                               value: isSelected,
                               activeColor: Colors.brown,
@@ -2437,37 +2568,6 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               ),
             ),
             actions: [
-              // Botão excluir
-              TextButton.icon(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 18),
-                label: const Text("EXCLUIR", style: TextStyle(color: Colors.red)),
-                onPressed: () {
-                  showDialog(
-                    context: ctx,
-                    builder: (confirmCtx) => AlertDialog(
-                      title: const Text('Confirmar exclusão'),
-                      content: Text('Deseja excluir a gira "${gira.tema}"?'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(confirmCtx), child: const Text('CANCELAR')),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                          onPressed: () async {
-                            await ref.read(adminRepositoryProvider).deleteGira(gira.id);
-                            if (confirmCtx.mounted) Navigator.pop(confirmCtx);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Gira excluída'), backgroundColor: Colors.orange),
-                              );
-                            }
-                          },
-                          child: const Text('EXCLUIR'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
               const Spacer(),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
@@ -2487,7 +2587,9 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     .toList();
                   final presencas = <String, bool>{};
                   for (var id in participantes) {
-                    presencas[id] = gira.presencas[id] ?? true;
+                    presencas[id] = (gira.presencas != null && gira.presencas.containsKey(id)) 
+                        ? gira.presencas[id]! 
+                        : true;
                   }
                   
                   final updatedGira = Gira(
@@ -2660,10 +2762,13 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                                     CircleAvatar(
                                       backgroundColor: medium.ativo ? Colors.brown : Colors.grey,
                                       radius: 24,
-                                      child: Text(
-                                        medium.nome.isNotEmpty ? medium.nome.substring(0, 1).toUpperCase() : '?',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-                                      ),
+                                      backgroundImage: medium.fotoUrl != null ? NetworkImage(medium.fotoUrl!) : null,
+                                      child: medium.fotoUrl == null 
+                                          ? Text(
+                                              medium.nome.isNotEmpty ? medium.nome.substring(0, 1).toUpperCase() : '?',
+                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+                                            )
+                                          : null,
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(

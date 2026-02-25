@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
 
 class CadastroFormData extends ChangeNotifier {
   // Aba 1: Perfil
@@ -11,6 +12,7 @@ class CadastroFormData extends ChangeNotifier {
   bool ativo = true;
   final TextEditingController observacaoController = TextEditingController();
   String? fotoUrl; // URL da foto após upload
+  bool isUploadingFoto = false;
 
   // Aba 2: Pessoal
   final TextEditingController dtNascimentoController = TextEditingController();
@@ -25,10 +27,13 @@ class CadastroFormData extends ChangeNotifier {
   bool temFilhos = false;
   int qtdFilhos = 1;
   List<TextEditingController> nomesFilhosControllers = [];
+  List<TextEditingController> idadesFilhosControllers = [];
   bool restricaoSaude = false;
   final TextEditingController qualRestricaoController = TextEditingController();
   bool alergias = false;
   final TextEditingController quaisAlergiasController = TextEditingController();
+  bool tomaMedicacao = false;
+  List<TextEditingController> medicamentosControllers = [];
   final TextEditingController contatoEmergenciaNome = TextEditingController();
   final TextEditingController contatoEmergenciaParentesco = TextEditingController();
   final TextEditingController contatoEmergenciaTel = TextEditingController();
@@ -60,6 +65,59 @@ class CadastroFormData extends ChangeNotifier {
   // Aba 5: Entidades
   final List<EntidadeItem> entidades = [];
 
+  bool _isDisposed = false;
+  @override
+  void dispose() {
+    _isDisposed = true;
+    nomeController.dispose();
+    emailController.dispose();
+    telefoneController.dispose();
+    observacaoController.dispose();
+    dtNascimentoController.dispose();
+    cpfController.dispose();
+    cepController.dispose();
+    ruaController.dispose();
+    numeroController.dispose();
+    complementoController.dispose();
+    bairroController.dispose();
+    cidadeController.dispose();
+    qualRestricaoController.dispose();
+    quaisAlergiasController.dispose();
+    nomesFilhosControllers.forEach((c) => c.dispose());
+    idadesFilhosControllers.forEach((c) => c.dispose());
+    medicamentosControllers.forEach((c) => c.dispose());
+    contatoEmergenciaNome.dispose();
+    contatoEmergenciaParentesco.dispose();
+    contatoEmergenciaTel.dispose();
+    entradaTerreiroController.dispose();
+    dataBatismoController.dispose();
+    padrinhoBatismoController.dispose();
+    madrinhaBatismoController.dispose();
+    dataCrismaController.dispose();
+    padrinhoCrismaController.dispose();
+    madrinhaCrismaController.dispose();
+    obrigacoes.forEach((o) => o.dataController.dispose());
+    entidades.forEach((e) => e.nomeController.dispose());
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
+  void updateFotoUrl(String? url) {
+    fotoUrl = url;
+    notifyListeners();
+  }
+
+  void setUploadingFoto(bool val) {
+    isUploadingFoto = val;
+    notifyListeners();
+  }
+
   // Logic
   bool get isAssistencia => perfilAcesso == "Assistencia";
   bool get imageAuthDenied => usoImagem["Não Autorizo"] == true;
@@ -73,11 +131,22 @@ class CadastroFormData extends ChangeNotifier {
      temFilhos = val;
      if (!val) {
        nomesFilhosControllers.clear();
+       idadesFilhosControllers.clear();
        qtdFilhos = 1;
      } else {
        if (nomesFilhosControllers.isEmpty) _adjustFilhosCount(1);
      }
      notifyListeners();
+  }
+
+  void updateMedicacao(bool val) {
+    tomaMedicacao = val;
+    if (!val) {
+      medicamentosControllers.clear();
+    } else {
+      if (medicamentosControllers.isEmpty) _adjustMedicamentosCount(1);
+    }
+    notifyListeners();
   }
 
   void setQtdFilhos(int val) {
@@ -89,9 +158,33 @@ class CadastroFormData extends ChangeNotifier {
   void _adjustFilhosCount(int count) {
     while (nomesFilhosControllers.length < count) {
       nomesFilhosControllers.add(TextEditingController());
+      idadesFilhosControllers.add(TextEditingController());
     }
     while (nomesFilhosControllers.length > count) {
-      nomesFilhosControllers.removeLast();
+      nomesFilhosControllers.removeLast().dispose();
+      idadesFilhosControllers.removeLast().dispose();
+    }
+  }
+
+  void addMedicamento() {
+    _adjustMedicamentosCount(medicamentosControllers.length + 1);
+    notifyListeners();
+  }
+
+  void removeMedicamento(int index) {
+    if (index >= 0 && index < medicamentosControllers.length) {
+      medicamentosControllers[index].dispose();
+      medicamentosControllers.removeAt(index);
+      notifyListeners();
+    }
+  }
+
+  void _adjustMedicamentosCount(int count) {
+    while (medicamentosControllers.length < count) {
+      medicamentosControllers.add(TextEditingController());
+    }
+    while (medicamentosControllers.length > count) {
+      medicamentosControllers.removeLast().dispose();
     }
   }
 
@@ -165,9 +258,15 @@ class CadastroFormData extends ChangeNotifier {
                 'cidade': cidadeController.text,
             },
             'estadoCivil': estadoCivil,
-            'filhos': temFilhos ? nomesFilhosControllers.map((e) => e.text).toList() : [],
+            'filhos': temFilhos 
+                ? List.generate(nomesFilhosControllers.length, (i) => {
+                    'nome': nomesFilhosControllers[i].text,
+                    'idade': idadesFilhosControllers[i].text,
+                  }) 
+                : [],
             'restricoes': restricaoSaude ? qualRestricaoController.text : null,
             'alergias': alergias ? quaisAlergiasController.text : null,
+            'medicacao': tomaMedicacao ? medicamentosControllers.map((e) => e.text).toList() : [],
             'emergencia': {
                 'nome': contatoEmergenciaNome.text,
                 'parentesco': contatoEmergenciaParentesco.text,
@@ -199,8 +298,14 @@ class CadastroFormData extends ChangeNotifier {
       },
       
       // Entidades
-      'entidades': entidades.map((e) => {'linha': e.linha, 'tipo': e.tipo, 'nome': e.nomeController.text}).toList(),
+      'entidades': entidades.map((e) => {
+        'entidadeId': e.id ?? const Uuid().v4(),
+        'linha': e.linha, 
+        'tipo': e.tipo, 
+        'nome': e.nomeController.text
+      }).toList(),
       
+      'maxFichas': 10,
       'observacao': observacaoController.text,
       'dataCriacao': FieldValue.serverTimestamp(),
     };
@@ -220,13 +325,29 @@ class CadastroFormData extends ChangeNotifier {
       dtNascimentoController.text = dp['dtNascimento'] ?? '';
       cpfController.text = dp['cpf'] ?? '';
       estadoCivil = dp['estadoCivil'] ?? 'Solteiro';
+      
       final filhos = dp['filhos'] as List<dynamic>?;
       if (filhos != null && filhos.isNotEmpty) {
         temFilhos = true;
         qtdFilhos = filhos.length;
         _adjustFilhosCount(qtdFilhos);
         for (int i = 0; i < filhos.length; i++) {
-          nomesFilhosControllers[i].text = filhos[i];
+          final f = filhos[i];
+          if (f is Map) {
+            nomesFilhosControllers[i].text = f['nome'] ?? '';
+            idadesFilhosControllers[i].text = f['idade'] ?? '';
+          } else if (f is String) {
+            nomesFilhosControllers[i].text = f;
+          }
+        }
+      }
+      
+      final meds = dp['medicacao'] as List<dynamic>?;
+      if (meds != null && meds.isNotEmpty) {
+        tomaMedicacao = true;
+        _adjustMedicamentosCount(meds.length);
+        for (int i = 0; i < meds.length; i++) {
+          medicamentosControllers[i].text = meds[i] ?? '';
         }
       }
       final end = dp['endereco'] as Map<String, dynamic>?;
@@ -290,11 +411,12 @@ class CadastroFormData extends ChangeNotifier {
       }
     }
 
-    final ents = map['ententities'] as List<dynamic>? ?? map['entidades'] as List<dynamic>?;
+    final ents = map['entidades'] as List<dynamic>?;
     if (ents != null) {
       entidades.clear();
       for (final e in ents) {
         final item = EntidadeItem();
+        item.id = e['entidadeId'] ?? e['id']; // Tenta pegar de 'entidadeId' ou 'id' antigo
         item.linha = e['linha'] ?? 'CABOCLO';
         item.tipo = e['tipo'] ?? 'CABOCLO';
         item.nomeController.text = e['nome'] ?? '';
@@ -304,16 +426,6 @@ class CadastroFormData extends ChangeNotifier {
 
     notifyListeners();
   }
-  
-  @override
-  void dispose() {
-    nomeController.dispose();
-    emailController.dispose();
-    nomesFilhosControllers.forEach((c) => c.dispose());
-    obrigacoes.forEach((o) => o.dataController.dispose());
-    entidades.forEach((e) => e.nomeController.dispose());
-    super.dispose();
-  }
 }
 
 class ObrigacaoItem {
@@ -322,6 +434,7 @@ class ObrigacaoItem {
 }
 
 class EntidadeItem {
+  String? id;
   String linha = "CABOCLO";
   String tipo = "CABOCLO";
   final TextEditingController nomeController = TextEditingController();

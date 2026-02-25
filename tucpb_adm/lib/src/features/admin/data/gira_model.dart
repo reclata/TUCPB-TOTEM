@@ -14,6 +14,10 @@ class GiraModel {
   final String? mediumId; // Caso seja limpeza
   final String? mediumNome; // Nome do médium escalado
   final bool visivelAssistencia; // Se é visível para o público/assistência
+  // Configurações do Kiosk (Totem)
+  final String horarioKiosk;
+  final String? horarioEncerramentoKiosk;
+  final bool encerramentoKioskAtivo;
   
   // Histórico (preenchido pelo TOTEM após a gira)
   final HistoricoGira? historico;
@@ -31,6 +35,9 @@ class GiraModel {
     this.mediumId,
     this.mediumNome,
     this.visivelAssistencia = true,
+    this.horarioKiosk = '18:00',
+    this.horarioEncerramentoKiosk,
+    this.encerramentoKioskAtivo = false,
     this.historico,
   });
 
@@ -49,6 +56,9 @@ class GiraModel {
       mediumId: map['mediumId'],
       mediumNome: map['mediumNome'],
       visivelAssistencia: map['visivelAssistencia'] ?? true,
+      horarioKiosk: map['horarioKiosk'] ?? '18:00',
+      horarioEncerramentoKiosk: map['horarioEncerramentoKiosk'],
+      encerramentoKioskAtivo: map['encerramentoKioskAtivo'] ?? false,
       historico: map['historico'] != null
           ? HistoricoGira.fromMap(map['historico'] as Map<String, dynamic>)
           : null,
@@ -67,6 +77,9 @@ class GiraModel {
         'mediumId': mediumId,
         'mediumNome': mediumNome,
         'visivelAssistencia': visivelAssistencia,
+        'horarioKiosk': horarioKiosk,
+        'horarioEncerramentoKiosk': horarioEncerramentoKiosk,
+        'encerramentoKioskAtivo': encerramentoKioskAtivo,
         'dataCriacao': FieldValue.serverTimestamp(),
         // 'historico' é preenchido pelo TOTEM
       };

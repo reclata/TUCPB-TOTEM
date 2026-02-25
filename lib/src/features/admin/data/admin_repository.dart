@@ -1,5 +1,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 
@@ -13,8 +14,7 @@ class AdminRepository {
   // --- Gira Management ---
   Future<void> createGira(Gira gira) async {
     // Buscar médiuns para pré-popular presenças
-    final mediumsSnap = await _firestore.collection('mediuns')
-        .where('terreiroId', isEqualTo: gira.terreiroId)
+    final mediumsSnap = await _firestore.collection('usuarios')
         .where('ativo', isEqualTo: true)
         .get();
 
@@ -66,11 +66,42 @@ class AdminRepository {
   Stream<List<Gira>> streamGiras(String terreiroId) {
     return _firestore
         .collection('giras')
-        .where('terreiroId', isEqualTo: terreiroId)
+        // Removido filtro de terreiroId para compatibilidade com tucpb_adm
         .orderBy('data', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Gira.fromJson(doc.data())).toList());
-  }
+        .map((snap) {
+          final List<Gira> result = [];
+          for (final doc in snap.docs) {
+            try {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+              // Compatibilidade: campo 'nome' do tucpb_adm -> 'tema' do Totem
+              data['tema'] ??= data['nome'] ?? '';
+              // Compatibilidade: 'linha' pode não existir no tucpb_adm
+              data['linha'] ??= '';
+              // Compatibilidade: 'horarioInicio' pode vir como vazio
+              data['horarioInicio'] ??= data['horarioFim'] ?? '';
+              // Compatibilidade: 'horarioKiosk' pode não existir
+              data['horarioKiosk'] ??= '';
+              // Compatibilidade: 'encerramentoKioskAtivo' pode não existir
+              data['encerramentoKioskAtivo'] ??= false;
+              // Compatibilidade: 'mediumsParticipantes' pode não existir
+              data['mediumsParticipantes'] ??= [];
+              // Compatibilidade: 'presencas' pode não existir
+              data['presencas'] ??= {};
+              // Compatibilidade: 'status' pode não existir (tucpb_adm usa 'ativo')
+              if (!data.containsKey('status') || data['status'] == null) {
+                data['status'] = (data['ativo'] == true) ? 'aberta' : 'agendada';
+              }
+              result.add(Gira.fromJson(data));
+            } catch (e) {
+              debugPrint('[KIOSK_DEBUG] Erro ao parsear Gira ${doc.id}: $e');
+            }
+          }
+          return result;
+        });
+    }
+
 
   // --- Entity Management ---
   Future<void> addEntity(Entidade entity) async {
@@ -88,15 +119,19 @@ class AdminRepository {
   Stream<List<Entidade>> streamEntities(String terreiroId) {
     return _firestore
         .collection('entidades')
-        .where('terreiroId', isEqualTo: terreiroId)
+        // Removido filtro de terreiroId
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Entidade.fromJson(doc.data())).toList());
-  }
+        .map((snap) => snap.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return Entidade.fromJson(data);
+        }).toList());
+    }
 
   // --- Medium Management ---
   Future<void> addMedium(Medium medium) async {
     // Save the medium
-    await _firestore.collection('mediuns').doc(medium.id).set(medium.toJson());
+    await _firestore.collection('usuarios').doc(medium.id).set(medium.toJson());
     
     // Auto-create entities that don't exist yet
     for (var medEnt in medium.entidades) {
@@ -115,7 +150,7 @@ class AdminRepository {
 
   Future<void> updateMedium(Medium medium) async {
     // Update the medium
-    await _firestore.collection('mediuns').doc(medium.id).update(medium.toJson());
+    await _firestore.collection('usuarios').doc(medium.id).update(medium.toJson());
     
     // Auto-create new entities
     for (var medEnt in medium.entidades) {
@@ -133,20 +168,58 @@ class AdminRepository {
   }
 
   Future<void> deleteMedium(String mediumId) async {
-    await _firestore.collection('mediuns').doc(mediumId).delete();
+    await _firestore.collection('usuarios').doc(mediumId).delete();
   }
 
   Stream<List<Medium>> streamMediums(String terreiroId) {
     return _firestore
-        .collection('mediuns')
-        .where('terreiroId', isEqualTo: terreiroId)
+        .collection('usuarios')
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Medium.fromJson(doc.data())).toList());
-  }
+        .map((snap) {
+          final List<Medium> result = [];
+          for (final doc in snap.docs) {
+            try {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+              // Compatibilidade: campo 'nome' pode não existir
+              data['nome'] ??= data['nomeCompleto'] ?? '';
+              // Compatibilidade: campo 'ativo' pode não existir (padrão: true)
+              data['ativo'] ??= true;
+              // Compatibilidade: 'cargo' pode não existir
+              data['cargo'] ??= '';
+              // Compatibilidade: 'fotoUrl' pode não existir
+              data['fotoUrl'] ??= '';
+              // Compatibilidade: 'ultimaGira' pode não existir
+              data['ultimaGira'] ??= '';
+              // Compatibilidade: 'entidades' pode não existir
+              data['entidades'] ??= [];
+              // Pré-processar entidades para garantir campos corretos
+              if (data['entidades'] is List) {
+                final ents = (data['entidades'] as List).map((e) {
+                  final ent = Map<String, dynamic>.from(e as Map? ?? {});
+                  // 'entidadeId' pode não existir no tucpb_adm
+                  ent['entidadeId'] ??= ent['id'] ?? '';
+                  // 'status' pode não existir — padrão: 'ativo'
+                  ent['status'] ??= 'ativo';
+                  // 'linha' pode estar em uppercase no tucpb_adm
+                  ent['linha'] ??= '';
+                  ent['tipo'] ??= '';
+                  return ent;
+                }).toList();
+                data['entidades'] = ents;
+              }
+              result.add(Medium.fromJson(data));
+            } catch (e) {
+              debugPrint('[KIOSK_DEBUG] Erro ao parsear Medium ${doc.id}: $e');
+            }
+          }
+          return result;
+        });
+    }
   
   // Toggle Medium Status (Active/Inactive for today's Gira)
   Future<void> toggleMediumStatus(String mediumId, bool isActive) async {
-    await _firestore.collection('mediuns').doc(mediumId).update({'ativo': isActive});
+    await _firestore.collection('usuarios').doc(mediumId).update({'ativo': isActive});
   }
 
   // --- Usuario Management ---
@@ -167,17 +240,25 @@ class AdminRepository {
         .collection('usuarios')
         .where('terreiroId', isEqualTo: terreiroId)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Usuario.fromJson(doc.data())).toList());
+        .map((snap) => snap.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return Usuario.fromJson(data);
+        }).toList());
   }
 
   // --- Ticket Management ---
   Stream<List<Ticket>> streamTickets(String terreiroId) {
     return _firestore
         .collection('tickets')
-        .where('terreiroId', isEqualTo: terreiroId)
+        // Removido filtro de terreiroId
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Ticket.fromJson(doc.data())).toList());
-  }
+        .map((snap) => snap.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return Ticket.fromJson(data);
+        }).toList());
+    }
 
   // --- Seed Data for Testing ---
   Future<void> generateSeedData(String terreiroId) async {

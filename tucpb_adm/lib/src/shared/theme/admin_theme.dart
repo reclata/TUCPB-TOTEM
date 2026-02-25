@@ -19,12 +19,11 @@ class AdminTheme {
 
   static ThemeData get theme {
     return ThemeData(
-      useMaterial3: true,
       scaffoldBackgroundColor: background,
       primaryColor: primary,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
-        background: background,
+      ).copyWith(
         surface: surface,
       ),
       textTheme: GoogleFonts.outfitTextTheme().apply(

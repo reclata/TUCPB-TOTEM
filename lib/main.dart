@@ -4,9 +4,11 @@ import 'package:terreiro_queue_system/src/features/auth/presentation/login_scree
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Screens
 import 'package:terreiro_queue_system/src/features/kiosk/presentation/kiosk_screen.dart';
@@ -28,12 +30,26 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Desabilitar download de fontes da rede — usar apenas fontes bundled no app
+    // Isso evita texto invisível quando o dispositivo não tem internet
+    GoogleFonts.config.allowRuntimeFetching = false;
     
-    // Desabilitar persistência temporariamente para diagnosticar erro no Web
-    /*FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );*/
+    // No Kiosk (Android), autenticar anonimamente para permitir leitura do Firestore
+    // sem exigir login manual do usuário
+    if (!kIsWeb) {
+      try {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser == null) {
+          await FirebaseAuth.instance.signInAnonymously();
+          debugPrint('[KIOSK] Autenticação anônima realizada com sucesso.');
+        } else {
+          debugPrint('[KIOSK] Usuário já autenticado: ${currentUser.uid}');
+        }
+      } catch (authError) {
+        debugPrint('[KIOSK] Falha na autenticação anônima: $authError');
+      }
+    }
   } catch (e) {
     debugPrint("Firebase init failed: $e");
   }
@@ -43,13 +59,14 @@ void main() async {
 
 // Router configuration with Auth Guard
 final _router = GoRouter(
-  initialLocation: '/admin',
+  initialLocation: kIsWeb ? '/login' : '/kiosk',
   refreshListenable: GoInfra.authStream, // Listen to auth changes
   redirect: (context, state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
     final isLoggingIn = state.uri.toString() == '/login';
     final isPublicRoute = state.uri.toString().startsWith('/tv') || 
-                          state.uri.toString().startsWith('/queue');
+                          state.uri.toString().startsWith('/queue') ||
+                          state.uri.toString().startsWith('/kiosk');
 
     if (!isLoggedIn && !isPublicRoute && !isLoggingIn) {
       return '/login';
@@ -65,26 +82,52 @@ final _router = GoRouter(
   routes: [
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      pageBuilder: (context, state) {
+        _setTitle('TUCPB_TABLET');
+        return NoTransitionPage(child: const LoginScreen());
+      },
     ),
     GoRoute(
       path: '/kiosk',
-      builder: (context, state) => const KioskScreen(),
+      pageBuilder: (context, state) {
+        _setTitle('TUCPB_KIOSK');
+        return NoTransitionPage(child: const KioskScreen());
+      },
     ),
     GoRoute(
       path: '/admin',
-      builder: (context, state) => const AdminScreen(),
+      pageBuilder: (context, state) {
+        _setTitle('TUCPB_TABLET');
+        return NoTransitionPage(child: const AdminScreen());
+      },
     ),
     GoRoute(
       path: '/tv/:terreiroId',
-      builder: (context, state) => TvScreen(terreiroId: state.pathParameters['terreiroId']!),
+      pageBuilder: (context, state) {
+        _setTitle('TUCPB_SENHAS');
+        return NoTransitionPage(
+          child: TvScreen(terreiroId: state.pathParameters['terreiroId']!),
+        );
+      },
     ),
     GoRoute(
-      path: '/queue/:terreiroId', // Public User Queue View
-      builder: (context, state) => QueueWebScreen(terreiroId: state.pathParameters['terreiroId']!),
+      path: '/queue/:terreiroId',
+      pageBuilder: (context, state) {
+        _setTitle('TUCPB_KIOSK');
+        return NoTransitionPage(
+          child: QueueWebScreen(terreiroId: state.pathParameters['terreiroId']!),
+        );
+      },
     ),
   ],
 );
+
+void _setTitle(String title) {
+  // Muda o título da aba do navegador
+  SystemChrome.setApplicationSwitcherDescription(
+    ApplicationSwitcherDescription(label: title, primaryColor: 0xFF4E342E),
+  );
+}
 
 // Helper for GoRouter listenable
 class GoInfra {
@@ -110,7 +153,7 @@ class TerreiroApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'T.U.C.P.B. Token',
+      title: 'TUCPB Token',
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: Colors.white,
@@ -134,6 +177,7 @@ class TerreiroApp extends ConsumerWidget {
           labelType: NavigationRailLabelType.none,
         ),
       ),
+      themeMode: ThemeMode.light,
       routerConfig: _router,
     );
   }

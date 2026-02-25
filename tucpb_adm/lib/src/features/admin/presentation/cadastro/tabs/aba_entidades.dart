@@ -37,7 +37,7 @@ class AbaEntidades extends StatelessWidget {
                            child: DropdownButtonFormField<String>(
                              value: data.entidades[index].linha,
                              decoration: const InputDecoration(labelText: "Linha", border: OutlineInputBorder()),
-                             items: ["CABOCLO", "ERÊ", "PRETO VELHO", "BOIADEIRO", "BAIANO", "MALANDRO", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM", "FEITICEIRO"]
+                             items: ["CABOCLO", "ERÊ", "PRETO VELHO", "BOIADEIRO", "BAIANO", "MALANDRO", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM", "FEITICEIRO", "CIGANO"]
                                  .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                              onChanged: (v) { data.entidades[index].linha = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
                              data.notifyListeners(); },
@@ -48,7 +48,7 @@ class AbaEntidades extends StatelessWidget {
                            child: DropdownButtonFormField<String>(
                              value: data.entidades[index].tipo,
                              decoration: const InputDecoration(labelText: "Tipo", border: OutlineInputBorder()),
-                             items: ["CABOCLO", "CABOCLA", "ERÊ MENINO", "ERÊ MENINA", "PRETO VELHO", "PRETA VELHA", "BOIADEIRO", "VAQUEIRO", "BAIANO", "BAIANA", "MALANDRO", "MALANDRA", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM MENINO", "EXÚ - MIRIM MENINA", "FEITICEIRO", "FEITICEIRA"]
+                             items: ["CABOCLO", "CABOCLA", "ERÊ MENINO", "ERÊ MENINA", "PRETO VELHO", "PRETA VELHA", "BOIADEIRO", "VAQUEIRO", "BAIANO", "BAIANA", "MALANDRO", "MALANDRA", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM MENINO", "EXÚ - MIRIM MENINA", "FEITICEIRO", "FEITICEIRA", "CIGANO", "CIGANA"]
                                  .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                              onChanged: (v) { data.entidades[index].tipo = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
                              data.notifyListeners(); },

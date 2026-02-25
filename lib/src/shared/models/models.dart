@@ -21,12 +21,18 @@ class TimestampConverter implements JsonConverter<DateTime, Object> {
 @JsonSerializable()
 class Gira {
   final String id;
-  final String terreiroId;
+  final String? terreiroId;
   final String linha;
+  @JsonKey(readValue: _readGiraTema)
   final String tema;
+  
+  static Object? _readGiraTema(Map json, String key) => 
+      json['nome'] ?? json['tema'] ?? '';
   @TimestampConverter()
   final DateTime data;
+  @JsonKey(defaultValue: 'agendada')
   final String status; // aberta, encerrada, agendada
+  final bool? ativo; // vindo do tucpb_adm
   final String horarioInicio; // e.g. "19:00"
   final String horarioKiosk; // horário de liberação do kiosk
   final String? horarioEncerramentoKiosk; // horário encerramento (opcional)
@@ -37,11 +43,12 @@ class Gira {
 
   const Gira({
     required this.id,
-    required this.terreiroId,
-    required this.linha,
-    required this.tema,
+    this.terreiroId,
+    this.linha = '',
+    this.tema = '',
     required this.data,
-    required this.status,
+    this.status = 'agendada',
+    this.ativo,
     this.horarioInicio = '',
     this.horarioKiosk = '',
     this.horarioEncerramentoKiosk,
@@ -49,6 +56,12 @@ class Gira {
     this.mediumsParticipantes = const [],
     this.presencas = const {},
   });
+
+  // Getter de compatibilidade: se status não estiver setado ou for vazio, tenta usar o 'ativo'
+  bool get isAberta => status == 'aberta' || (ativo == true);
+  
+  // Getter de compatibilidade para tema (no ADM é apenas 'nome')
+  String get nomeExibicao => tema.isNotEmpty ? tema : linha;
 
   factory Gira.fromJson(Map<String, dynamic> json) => _$GiraFromJson(json);
   Map<String, dynamic> toJson() => _$GiraToJson(this);
@@ -76,18 +89,26 @@ class Entidade {
 
 @JsonSerializable()
 class MediumEntidade {
+  @JsonKey(defaultValue: '')
   final String entidadeId;
+  @JsonKey(name: 'nome', defaultValue: '', readValue: _readEntidadeNome)
   final String entidadeNome; // Denormalized for easier display
+  
+  static Object? _readEntidadeNome(Map json, String key) => 
+      json['nome'] ?? json['entidadeNome'] ?? '';
+  @JsonKey(defaultValue: '')
   final String linha; // Spiritual line
+  @JsonKey(defaultValue: '')
   final String tipo; // Entity type
+  @JsonKey(defaultValue: 'ativo')
   final String status; // 'ativo', 'pausado', 'desativado'
 
   const MediumEntidade({
     required this.entidadeId,
-    required this.entidadeNome,
-    required this.linha,
-    required this.tipo,
-    required this.status,
+    this.entidadeNome = '',
+    this.linha = '',
+    this.tipo = '',
+    this.status = 'ativo',
   });
 
   factory MediumEntidade.fromJson(Map<String, dynamic> json) => _$MediumEntidadeFromJson(json);
@@ -97,7 +118,7 @@ class MediumEntidade {
 @JsonSerializable()
 class Medium {
   final String id;
-  final String terreiroId;
+  final String? terreiroId;
   final String nome;
   final bool ativo; // General status of the medium
   final List<MediumEntidade> entidades; // List of entities they channel
@@ -109,23 +130,35 @@ class Medium {
   
   // Settings
   final int maxFichas;
+  final String cargo;
+  final String fotoUrl;
+  @JsonKey(name: 'observacao', defaultValue: '')
+  final String observacoes;
+  final String ultimaGira;
+  @JsonKey(name: 'perfil', defaultValue: 'medium')
+  final String tipoAcesso;
 
   const Medium({
     required this.id,
-    required this.terreiroId,
-    required this.nome,
-    required this.ativo,
+    this.terreiroId,
+    this.nome = '',
+    this.ativo = true,
     this.entidades = const [],
     this.girasParticipadas = 0,
     this.atendimentosRealizados = 0,
     this.faltas = 0,
-    this.maxFichas = 10,
+    this.maxFichas = 0,
+    this.cargo = '',
+    this.fotoUrl = '',
+    this.observacoes = '',
+    this.ultimaGira = '',
+    this.tipoAcesso = 'medium',
   });
 
   factory Medium.fromJson(Map<String, dynamic> json) => _$MediumFromJson(json);
   Map<String, dynamic> toJson() => _$MediumToJson(this);
 }
-@TimestampConverter()
+
 
 @JsonSerializable()
 class Ticket {
