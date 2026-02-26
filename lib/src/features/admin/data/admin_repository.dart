@@ -92,13 +92,22 @@ class AdminRepository {
               // Compatibilidade: 'encerramentoKioskAtivo' pode não existir
               data['encerramentoKioskAtivo'] = data['encerramentoKioskAtivo'] ?? false;
               
-              // Explicit type conversion for Lists
-              data['mediumsParticipantes'] = List<String>.from(data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? []);
-              data['entidadesParticipantes'] = List<String>.from(data['entidadesParticipantes'] ?? data['entidades_participantes'] ?? []);
+              // Explicit type conversion for Lists (String only)
+              final List rawMediums = (data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? []) as List;
+              data['mediumsParticipantes'] = rawMediums.map((e) => e.toString()).toList();
               
-              // Explicit type conversion for Map
+              final List rawEntidadesPart = (data['entidadesParticipantes'] ?? data['entidades_participantes'] ?? []) as List;
+              data['entidadesParticipantes'] = rawEntidadesPart.map((e) => e.toString()).toList();
+              
+              // Explicit type conversion for Map (String -> bool)
               final rawPresencas = data['presencas'] ?? data['presences'] ?? {};
-              data['presencas'] = Map<String, bool>.from(rawPresencas is Map ? rawPresencas : {});
+              final Map<String, bool> presencasMap = {};
+              if (rawPresencas is Map) {
+                rawPresencas.forEach((k, v) {
+                  presencasMap[k.toString()] = v == true;
+                });
+              }
+              data['presencas'] = presencasMap;
               
               // Compatibilidade: 'status' pode não existir (tucpb_adm usa 'ativo')
               if (!data.containsKey('status') || data['status'] == null) {

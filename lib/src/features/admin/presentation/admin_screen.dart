@@ -2300,13 +2300,16 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
           if (!initialized && mediumsAsync.hasValue) {
             initialized = true;
           
+            final currentEntidadesPart = List<String>.from(gira.entidadesParticipantes ?? []);
+            final currentMediumsPart = List<String>.from(gira.mediumsParticipantes ?? []);
+
             // Inicializar entidades selecionadas
-            for (var entId in (gira.entidadesParticipantes ?? [])) {
+            for (var entId in currentEntidadesPart) {
               entitiesSelected[entId] = true;
             }
             // Inicializar médiuns
-            for (var m in allMediums.where((m) => m.ativo)) {
-              mediumsSelected[m.id] = (gira.mediumsParticipantes ?? []).contains(m.id);
+            for (var m in allMediums.where((m) => m != null && m.ativo)) {
+              mediumsSelected[m.id] = currentMediumsPart.contains(m.id);
             }
             
             final String currentGiraTema = gira.tema ?? '';

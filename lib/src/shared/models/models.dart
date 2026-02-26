@@ -27,7 +27,7 @@ class Gira {
   final String tema;
   
   static Object? _readGiraTema(Map json, String key) => 
-      json['nome'] ?? json['tema'] ?? '';
+      (json['nome'] ?? json['tema'] ?? '').toString();
   @TimestampConverter()
   final DateTime data;
   @JsonKey(defaultValue: 'agendada')
@@ -46,11 +46,11 @@ class Gira {
   final Map<String, bool> presencas; // mediumId -> presente (true/false)
 
   static Object? _readMediumsParticipantes(Map json, String key) => 
-      json['mediumsParticipantes'] ?? json['mediums_participantes'] ?? [];
+      List<dynamic>.from(json['mediumsParticipantes'] ?? json['mediums_participantes'] ?? []);
   static Object? _readEntidadesParticipantes(Map json, String key) => 
-      json['entidadesParticipantes'] ?? json['entidades_participantes'] ?? [];
+      List<dynamic>.from(json['entidadesParticipantes'] ?? json['entidades_participantes'] ?? []);
   static Object? _readPresencas(Map json, String key) => 
-      json['presencas'] ?? json['presences'] ?? {};
+      Map<String, dynamic>.from(json['presencas'] ?? json['presences'] ?? <String, dynamic>{});
 
   const Gira({
     required this.id,
@@ -107,7 +107,7 @@ class MediumEntidade {
   final String entidadeNome; // Denormalized for easier display
   
   static Object? _readEntidadeNome(Map json, String key) => 
-      json['nome'] ?? json['entidadeNome'] ?? '';
+      (json['nome'] ?? json['entidadeNome'] ?? '').toString();
   @JsonKey(defaultValue: '')
   final String linha; // Spiritual line
   @JsonKey(defaultValue: '')

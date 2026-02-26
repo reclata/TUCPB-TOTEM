@@ -55,29 +55,33 @@ class GiraModel {
     final rawData = doc.data();
     if (rawData == null) throw Exception("Documento ${doc.id} sem dados");
     final map = Map<String, dynamic>.from(rawData as Map);
+    final List rawMed = (map['mediumsParticipantes'] ?? map['mediums_participantes'] ?? []) as List;
+    final List rawEnt = (map['entidadesParticipantes'] ?? map['entidades_participantes'] ?? []) as List;
+    final Map rawPre = (map['presencas'] ?? map['presences'] ?? {}) as Map;
+
     return GiraModel(
       id: doc.id,
       nome: (map['nome'] ?? '').toString(),
       data: (map['data'] as Timestamp).toDate(),
-      horarioInicio: map['horarioInicio'] ?? '',
-      horarioFim: map['horarioFim'] ?? '',
+      horarioInicio: (map['horarioInicio'] ?? '').toString(),
+      horarioFim: (map['horarioFim'] ?? '').toString(),
       ativo: map['ativo'] ?? true,
       descricao: map['descricao'],
-      tipo: map['tipo'] ?? 'gira',
-      linha: map['linha'] ?? '',
-      tema: map['tema'] ?? map['nome'] ?? '',
+      tipo: (map['tipo'] ?? 'gira').toString(),
+      linha: (map['linha'] ?? '').toString(),
+      tema: (map['tema'] ?? map['nome'] ?? '').toString(),
       cor: map['cor'],
       mediumId: map['mediumId'],
       mediumNome: map['mediumNome'],
       visivelAssistencia: map['visivelAssistencia'] ?? true,
-      horarioKiosk: map['horarioKiosk'] ?? '18:00',
+      horarioKiosk: (map['horarioKiosk'] ?? '18:00').toString(),
       horarioEncerramentoKiosk: map['horarioEncerramentoKiosk'],
       encerramentoKioskAtivo: map['encerramentoKioskAtivo'] ?? false,
-      mediumsParticipantes: List<String>.from(map['mediumsParticipantes'] ?? map['mediums_participantes'] ?? []),
-      entidadesParticipantes: List<String>.from(map['entidadesParticipantes'] ?? map['entidades_participantes'] ?? []),
-      presencas: Map<String, bool>.from(map['presencas'] ?? map['presences'] ?? {}),
+      mediumsParticipantes: rawMed.map((e) => e.toString()).toList(),
+      entidadesParticipantes: rawEnt.map((e) => e.toString()).toList(),
+      presencas: rawPre.map((k, v) => MapEntry(k.toString(), v == true)),
       historico: map['historico'] != null
-          ? HistoricoGira.fromMap(map['historico'] as Map<String, dynamic>)
+          ? HistoricoGira.fromMap(Map<String, dynamic>.from(map['historico'] as Map))
           : null,
     );
   }
