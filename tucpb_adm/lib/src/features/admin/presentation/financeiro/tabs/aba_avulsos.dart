@@ -5,6 +5,7 @@ import 'package:tucpb_adm/src/features/admin/data/cobranca_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/financeiro_repository.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
 import 'package:tucpb_adm/src/features/auth/presentation/auth_user_provider.dart';
+import 'package:tucpb_adm/src/shared/services/printer_service.dart';
 
 class AbaAvulsos extends ConsumerStatefulWidget {
   const AbaAvulsos({super.key});
@@ -213,11 +214,29 @@ class _AvulsoCard extends ConsumerWidget {
                       .atualizarStatus(c.id, StatusCobranca.pago, dataPagamento: DateTime.now());
                 } else if (val == 'deletar') {
                   await refW.read(financeiroRepositoryProvider).deletarCobranca(c.id);
+                } else if (val == 'imprimir') {
+                  try {
+                    await refW.read(printerServiceProvider).imprimirRecibo(
+                      usuario: c.usuarioNome,
+                      tipo: c.tipo,
+                      valor: c.valor,
+                      data: DateTime.now(),
+                      descricao: c.descricao,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Recibo enviado para impressora!'), backgroundColor: Colors.green));
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro na impressora: $e'), backgroundColor: Colors.red));
+                    }
+                  }
                 }
               },
               itemBuilder: (_) => [
                 if (c.status != StatusCobranca.pago)
                   const PopupMenuItem(value: 'pago', child: ListTile(leading: Icon(Icons.check_circle, color: Colors.green), title: Text('Marcar como Pago'))),
+                const PopupMenuItem(value: 'imprimir', child: ListTile(leading: Icon(Icons.print, color: Colors.brown), title: Text('Imprimir Recibo'))),
                 const PopupMenuItem(value: 'deletar', child: ListTile(leading: Icon(Icons.delete, color: Colors.red), title: Text('Deletar'))),
               ],
             ),

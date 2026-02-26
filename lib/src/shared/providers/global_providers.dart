@@ -1,7 +1,9 @@
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:terreiro_queue_system/src/features/admin/data/admin_repository.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
 
 // Providers shared across Admin, Kiosk, TV
 
@@ -62,7 +64,10 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
   final entitiesAsync = ref.watch(entityListProvider(terreiroId));
 
   if (activeGiraAsync.isLoading || mediumsAsync.isLoading || entitiesAsync.isLoading) return const AsyncLoading();
-  if (activeGiraAsync.hasError || mediumsAsync.hasError || entitiesAsync.hasError) return const AsyncError("Error loading data", StackTrace.empty);
+  
+  if (activeGiraAsync.hasError) return AsyncError("Erro na Gira: ${activeGiraAsync.error}", activeGiraAsync.stackTrace ?? StackTrace.empty);
+  if (mediumsAsync.hasError) return AsyncError("Erro nos Médiuns: ${mediumsAsync.error}", mediumsAsync.stackTrace ?? StackTrace.empty);
+  if (entitiesAsync.hasError) return AsyncError("Erro nas Entidades: ${entitiesAsync.error}", entitiesAsync.stackTrace ?? StackTrace.empty);
 
   final activeGira = activeGiraAsync.value;
   final mediums = mediumsAsync.value ?? [];
@@ -79,20 +84,15 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
     return true;
   }).toList();
   
-  // Grupos de linhagem (centralizado e sincronizado com o Admin)
-  final Map<String, List<String>> lineGroups = {
-    'BOIADEIRO': ['BOIADEIRO', 'MARINHEIRO', 'MALANDRO', 'VAQUEIRO'],
-    'ESQUERDA': ['ESQUERDA', 'EXU', 'POMBA GIRA', 'POMBO GIRO', 'EXU MIRIM'],
-    'PRETO VELHO': ['PRETO VELHO', 'PRETA VELHA', 'FEITICEIRO'],
-    'CABOCLO': ['CABOCLO', 'CABOCLA'],
-    'ERES': ['ERÊ', 'CRIANÇA'],
-    'BAIANO': ['BAIANO', 'BAIANA'],
-    'CIGANO': ['CIGANO', 'CIGANA'],
-  };
-  
+// Normalização agora vem de spiritual_utils.dart
+
   // Quando a linha da gira está vazia (ex: fallback), não filtrar por linha
-  final allowedLines = (activeGira != null && activeGira.linha.isNotEmpty)
-      ? (lineGroups[activeGira.linha.toUpperCase()] ?? [activeGira.linha.toUpperCase()])
+  final activeGiraLineNorm = activeGira != null && activeGira.linha.isNotEmpty 
+      ? normalizeSpiritualLine(activeGira.linha) 
+      : null;
+
+  final allowedLines = activeGiraLineNorm != null
+      ? (LINE_GROUPS[activeGiraLineNorm] ?? [activeGiraLineNorm])
       : null; // null = sem filtro de linha
 
   List<({Medium medium, Entidade entity})> result = [];
@@ -100,12 +100,24 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
     // Para cada entidade ativa do médium
     for (var medEnt in m.entidades) {
       if (medEnt.status == 'ativo') {
-        // Se houver uma gira, filtrar apenas entidades da linha permitida
-        if (allowedLines != null) {
-          final entLinha = medEnt.linha.toUpperCase();
-          if (!allowedLines.any((al) => al.toUpperCase() == entLinha)) {
+        // 1. Filtrar por seleção granular da Gira (se houver)
+        if (activeGira != null && (activeGira.entidadesParticipantes ?? []).isNotEmpty) {
+          if (!activeGira.entidadesParticipantes!.contains(medEnt.entidadeId)) {
             continue;
           }
+        }
+
+        // 2. Filtrar apenas entidades da linha permitida (safety check)
+        if (allowedLines != null) {
+          final entLinha = normalizeSpiritualLine(medEnt.linha);
+          final entTipo = normalizeSpiritualLine(medEnt.tipo);
+          
+          final isCompatible = allowedLines.any((al) {
+            final alNorm = normalizeSpiritualLine(al);
+            return entLinha == alNorm || entTipo == alNorm;
+          });
+          
+          if (!isCompatible) continue;
         }
 
         try {
@@ -133,16 +145,34 @@ final selectedTerreiroIdProvider = Provider<String?>((ref) {
   return 'demo-terreiro';
 });
 
-final currentUserProvider = Provider<Usuario?>((ref) {
-  return const Usuario(
-    id: 'admin-id',
-    terreiroId: 'demo-terreiro',
-    nomeCompleto: 'Admin T.U.C.P.B.',
-    login: 'admin',
-    senha: 'admin',
-    perfilAcesso: 'admin',
-    ativo: true,
-  );
+final authStateProvider = StreamProvider<User?>((ref) {
+  return FirebaseAuth.instance.authStateChanges();
+});
+
+final currentUserProvider = StreamProvider<Usuario?>((ref) {
+  final authUser = ref.watch(authStateProvider).value;
+  if (authUser == null) return Stream.value(null);
+
+  return FirebaseFirestore.instance
+      .collection('usuarios')
+      .doc(authUser.uid)
+      .snapshots()
+      .map((doc) {
+    if (!doc.exists) return null;
+    final data = Map<String, dynamic>.from(doc.data()!);
+    data['id'] = doc.id;
+    
+    // Safety mapping (same as repository)
+    data['nomeCompleto'] = (data['nomeCompleto'] ?? data['nome'] ?? 'Sem nome').toString();
+    data['login'] = (data['login'] ?? data['email'] ?? '').toString();
+    data['perfilAcesso'] = (data['perfilAcesso'] ?? data['perfil'] ?? 'medium').toString().toLowerCase();
+    data['terreiroId'] = (data['terreiroId'] ?? 'demo-terreiro').toString();
+    data['senha'] = (data['senha'] ?? data['senhaInicial'] ?? '').toString();
+    data['permissoes'] = List<String>.from(data['permissoes'] ?? []);
+    data['ativo'] = data['ativo'] ?? true;
+
+    return Usuario.fromJson(data);
+  });
 });
 
 // Provider que extrai linhas únicas dos médiuns cadastrados

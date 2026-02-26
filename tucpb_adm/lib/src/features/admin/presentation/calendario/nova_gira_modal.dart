@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:tucpb_adm/src/features/admin/data/gira_model.dart';
 import 'package:tucpb_adm/src/features/admin/data/giras_repository.dart';
 import 'package:tucpb_adm/src/shared/theme/admin_theme.dart';
+import 'package:tucpb_adm/src/shared/utils/spiritual_utils.dart';
 
 class NovaGiraModal extends ConsumerStatefulWidget {
   final GiraModel? giraParaEditar;
@@ -29,6 +30,14 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
   bool _ativo = true;
   bool _visivelAssistencia = true;
   bool _salvando = false;
+  String _searchQuery = '';
+
+  // Granular selection
+  Map<String, bool> _mediumsSelected = {};
+  Map<String, bool> _entitiesSelected = {};
+  List<String> _selectedLinhas = [];
+  String? _selectedTheme;
+  bool _initialized = false;
 
   static const _tipos = ['gira', 'limpeza', 'entrega', 'festa', 'evento'];
   static const _tiposLabel = {'gira': 'Giras', 'limpeza': 'Limpeza', 'entrega': 'Entrega', 'festa': 'Festas', 'evento': 'Evento'};
@@ -58,9 +67,52 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
       _mediumNome = g.mediumNome;
       _ativo = g.ativo;
       _visivelAssistencia = g.visivelAssistencia;
+      
+      // Load current participants
+      for (var mId in g.mediumsParticipantes) {
+        _mediumsSelected[mId] = true;
+      }
+      for (var eId in g.entidadesParticipantes) {
+        _entitiesSelected[eId] = true;
+      }
     } else if (widget.dataPreSelecionada != null) {
       _dataSelecionada = widget.dataPreSelecionada!;
     }
+  }
+
+  void _onThemeChanged(String? theme, List<DocumentSnapshot> allMediumsDocs) {
+    setState(() {
+      _selectedTheme = theme;
+      if (theme != null) {
+        _nomeController.text = theme;
+        _selectedLinhas = List.from(GIRA_THEME_MAPPING[theme] ?? []);
+        
+        // Sugerir flegues iniciais
+        _mediumsSelected.clear();
+        _entitiesSelected.clear();
+        
+        final allowedLinesNorm = _selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+        for (var doc in allMediumsDocs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['ativo'] == false) continue;
+          
+          final entidades = List<Map<String, dynamic>>.from(data['entidades'] ?? []);
+          final compatibleEntities = entidades.where((e) {
+            final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
+            final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
+            return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+          }).toList();
+          
+          if (compatibleEntities.isNotEmpty) {
+            _mediumsSelected[doc.id] = true;
+            for (var e in compatibleEntities) {
+              final eId = e['entidadeId'] ?? e['id'] ?? '';
+              if (eId.isNotEmpty) _entitiesSelected[eId] = true;
+            }
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -101,12 +153,20 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
           'horarioInicio': _horaInicioController.text,
           'horarioFim': _horaFimController.text,
           'tipo': _tipo,
+          'tema': _selectedTheme ?? _nomeController.text.trim(),
+          'linha': normalizeSpiritualLine((_selectedTheme ?? _nomeController.text.trim()).replaceAll('Gira de ', '')),
           'ativo': _ativo,
           'cor': GiraModel.defaultCor(_tipo),
           'mediumId': _tipo == 'limpeza' ? _mediumId : null,
           'mediumNome': _tipo == 'limpeza' ? _mediumNome : null,
           'visivelAssistencia': _visivelAssistencia,
           'horarioKiosk': _horarioKioskController.text,
+          'mediumsParticipantes': _mediumsSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+          'entidadesParticipantes': _entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+          'presencas': _mediumsSelected.entries.where((e) => e.value).fold<Map<String, bool>>({}, (map, e) {
+             map[e.key] = true;
+             return map;
+          }),
         });
       } else {
         final novaGira = GiraModel(
@@ -118,10 +178,18 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
           ativo: _ativo,
           descricao: _descricaoController.text.trim(),
           tipo: _tipo,
+          tema: _selectedTheme ?? _nomeController.text.trim(),
+          linha: normalizeSpiritualLine((_selectedTheme ?? _nomeController.text.trim()).replaceAll('Gira de ', '')),
           mediumId: _tipo == 'limpeza' ? _mediumId : null,
           mediumNome: _tipo == 'limpeza' ? _mediumNome : null,
           visivelAssistencia: _visivelAssistencia,
           horarioKiosk: _horarioKioskController.text,
+          mediumsParticipantes: _mediumsSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+          entidadesParticipantes: _entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+          presencas: _mediumsSelected.entries.where((e) => e.value).fold<Map<String, bool>>({}, (map, e) {
+             map[e.key] = true;
+             return map;
+          }),
         );
         await repo.criarGira(novaGira);
       }
@@ -190,6 +258,200 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
                   onSelected: (_) => setState(() => _tipo = t),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Seleção de Participantes
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('usuarios').snapshots(),
+              builder: (ctx, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final docs = snapshot.data!.docs;
+                final allMediums = docs.where((d) {
+                  final data = d.data() as Map<String, dynamic>;
+                  if (data['ativo'] == false) return false;
+                  
+                  final perfil = (data['perfil'] ?? '').toString().toLowerCase();
+                  final allowedProfiles = ['medium', 'médium', 'dirigente', 'admin', 'administrador'];
+                  if (!allowedProfiles.contains(perfil)) return false;
+
+                  final entidades = data['entidades'];
+                  if (entidades == null || (entidades as List).isEmpty) return false;
+
+                  return true;
+                }).toList();
+
+                if (!_initialized && _editando) {
+                   // Tentar inferir o tema/linhas se estiver editando e vier sem nada
+                   if (_selectedTheme == null && widget.giraParaEditar != null) {
+                      for (var themeKey in GIRA_THEME_MAPPING.keys) {
+                        if (widget.giraParaEditar!.nome.contains(themeKey)) {
+                          _selectedTheme = themeKey;
+                          _selectedLinhas = List.from(GIRA_THEME_MAPPING[themeKey] ?? []);
+                          break;
+                        }
+                      }
+                   }
+                   _initialized = true;
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Tema da Gira (Sugestão de participantes)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: GIRA_THEME_MAPPING.keys.map((theme) {
+                        final isSelected = _selectedTheme == theme;
+                        return ChoiceChip(
+                          label: Text(theme.replaceAll('Gira de ', '')),
+                          selected: isSelected,
+                          onSelected: (val) => _onThemeChanged(val ? theme : null, docs),
+                          selectedColor: AdminTheme.primary,
+                          labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Médiuns e Guias Participantes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar médium...',
+                              prefixIcon: Icon(Icons.search, size: 20),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) => setState(() => _searchQuery = val.toLowerCase().trim()),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              final currentMediums = allMediums.where((d) => ((d.data() as Map<String, dynamic>)['nome'] ?? '').toString().toLowerCase().contains(_searchQuery)).toList();
+                              
+                              bool allSelected = currentMediums.isNotEmpty && currentMediums.every((d) => _mediumsSelected[d.id] == true);
+                              bool nextState = !allSelected;
+
+                              for (var mDoc in currentMediums) {
+                                final mId = mDoc.id;
+                                final mData = mDoc.data() as Map<String, dynamic>;
+                                final entidades = List<Map<String, dynamic>>.from(mData['entidades'] ?? []);
+                                final allowedLinesNorm = _selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+                                final filteredEntidades = entidades.where((e) {
+                                   if (allowedLinesNorm.isEmpty) return true;
+                                   final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
+                                   final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
+                                   return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+                                }).toList();
+
+                                _mediumsSelected[mId] = nextState;
+                                if (nextState) {
+                                  for (var e in filteredEntidades) {
+                                    final eId = e['entidadeId'] ?? e['id'] ?? '';
+                                    if (eId.isNotEmpty) _entitiesSelected[eId] = true;
+                                  }
+                                } else {
+                                  for (var e in entidades) {
+                                    final eId = e['entidadeId'] ?? e['id'] ?? '';
+                                    if (eId.isNotEmpty) _entitiesSelected[eId] = false;
+                                  }
+                                }
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.checklist, size: 20, color: AdminTheme.primary),
+                          label: const Text('Selecionar Todos', style: TextStyle(color: AdminTheme.primary)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: allMediums.where((mDoc) {
+                          final mData = mDoc.data() as Map<String, dynamic>;
+                          final mNome = (mData['nome'] ?? 'Sem nome').toString().toLowerCase();
+                          if (_searchQuery.isEmpty) return true;
+                          if (mNome.contains(_searchQuery)) return true;
+                          
+                          final entidades = List<Map<String, dynamic>>.from(mData['entidades'] ?? []);
+                          for (var e in entidades) {
+                            final eNome = (e['entidadeNome'] ?? e['nome'] ?? '').toString().toLowerCase();
+                            final eLinha = (e['linha'] ?? '').toString().toLowerCase();
+                            final eTipo = (e['tipo'] ?? '').toString().toLowerCase();
+                            if (eNome.contains(_searchQuery) || eLinha.contains(_searchQuery) || eTipo.contains(_searchQuery)) return true;
+                          }
+                          return false;
+                        }).map((mDoc) {
+                          final mData = mDoc.data() as Map<String, dynamic>;
+                          final mId = mDoc.id;
+                          final mNome = mData['nome'] ?? 'Sem nome';
+                          final entidades = List<Map<String, dynamic>>.from(mData['entidades'] ?? []);
+                          
+                          final allowedLinesNorm = _selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+                          final filteredEntidades = entidades.where((e) {
+                             if (allowedLinesNorm.isEmpty) return true;
+                             final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
+                             final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
+                             return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+                          }).toList();
+
+                          final isMediumSelected = _mediumsSelected[mId] ?? false;
+
+                          return ExpansionTile(
+                            leading: Checkbox(
+                              value: isMediumSelected,
+                              activeColor: AdminTheme.primary,
+                              onChanged: (val) {
+                                setState(() {
+                                  _mediumsSelected[mId] = val ?? false;
+                                  if (val == true) {
+                                    for (var e in filteredEntidades) {
+                                      final eId = e['entidadeId'] ?? e['id'] ?? '';
+                                      if (eId.isNotEmpty) _entitiesSelected[eId] = true;
+                                    }
+                                  } else {
+                                    for (var e in entidades) {
+                                      final eId = e['entidadeId'] ?? e['id'] ?? '';
+                                      if (eId.isNotEmpty) _entitiesSelected[eId] = false;
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                            title: Text(mNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            subtitle: Text("${filteredEntidades.length} guia(s) compatíveis", style: const TextStyle(fontSize: 11)),
+                            children: filteredEntidades.map((e) {
+                              final eId = e['entidadeId'] ?? e['id'] ?? '';
+                              final eNome = e['entidadeNome'] ?? e['nome'] ?? 'Sem nome';
+                              return CheckboxListTile(
+                                title: Text(eNome, style: const TextStyle(fontSize: 13)),
+                                subtitle: Text("${e['linha'] ?? ''}${ (e['tipo'] ?? '').isNotEmpty && e['tipo'] != e['linha'] ? ' - ${e['tipo']}' : '' }", style: const TextStyle(fontSize: 11)),
+                                value: _entitiesSelected[eId] ?? false,
+                                activeColor: AdminTheme.primary,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _entitiesSelected[eId] = val ?? false;
+                                    if (val == true) _mediumsSelected[mId] = true;
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
 
@@ -273,6 +535,8 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
                     decoration: const InputDecoration(labelText: 'Início', border: OutlineInputBorder()),
                   ),
                 ),
+                SizedBox(
+                  width: 140,
                   child: TextFormField(
                     controller: _horaFimController,
                     decoration: const InputDecoration(labelText: 'Fim', border: OutlineInputBorder()),

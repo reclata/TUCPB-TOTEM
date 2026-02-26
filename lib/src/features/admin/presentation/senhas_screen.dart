@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 import 'package:terreiro_queue_system/src/shared/providers/global_providers.dart';
+import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
 import 'package:terreiro_queue_system/src/features/admin/data/admin_repository.dart';
 import 'package:terreiro_queue_system/src/features/queue/data/firestore_queue_repository.dart';
 
@@ -131,7 +132,7 @@ class _VisaoGeralTab extends ConsumerWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(medium.nome, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                      Text(medium.entidades.isNotEmpty ? medium.entidades.first.entidadeNome : 'Sem entidade',
+                                      Text(getEntityOfDay(gira, medium).entidadeNome,
                                         style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                                     ],
                                   ),
@@ -394,24 +395,7 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
                                 final bool isBusy = emAtendimento.isNotEmpty;
                                 final bool hasQueue = naFila.isNotEmpty;
 
-                                // Lógica da Entidade da Gira
-                                final giraLinha = gira.linha.toLowerCase();
-                                final activeEntities = medium.entidades
-                                    .where((e) => e.status == 'ativo')
-                                    .toList();
-                                String entidadeDisplay = 'Sem entidade';
-                                if (activeEntities.isNotEmpty) {
-                                  final match = activeEntities.firstWhere(
-                                    (e) =>
-                                        e.linha
-                                            .toLowerCase()
-                                            .contains(giraLinha) ||
-                                        giraLinha
-                                            .contains(e.linha.toLowerCase()),
-                                    orElse: () => activeEntities.first,
-                                  );
-                                  entidadeDisplay = match.entidadeNome;
-                                }
+                                  final entidadeDisplay = getEntityOfDay(gira, medium).entidadeNome;
 
                                 return Card(
                                   elevation: 2,
@@ -606,6 +590,7 @@ class _MediumQueuePanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+    final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
     final allTicketsAsync = ref.watch(allTicketsForGiraProvider(giraId));
 
     return mediumsAsync.when(
@@ -681,12 +666,8 @@ class _MediumQueuePanel extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               // Entidades agora aparecem apenas aqui no detalhe
-                              if (medium.entidades.isNotEmpty)
-                                Text(
-                                   medium.entidades
-                                      .where((e) => e.status == 'ativo')
-                                      .map((e) => e.entidadeNome)
-                                      .join(', '),
+                                 Text(
+                                   getEntityOfDay(activeGiraAsync.value!, medium).entidadeNome,
                                    maxLines: 2,
                                    overflow: TextOverflow.ellipsis,
                                    style: TextStyle(

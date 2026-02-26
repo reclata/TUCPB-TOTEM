@@ -103,20 +103,35 @@ class _AbaPerfilState extends State<AbaPerfil> {
               Expanded(
                 child: Tooltip(
                   message: widget.canEditPerfil ? '' : 'Apenas Admin ou Suporte podem alterar o perfil de acesso.',
-                  child: DropdownButtonFormField<String>(
-                    value: data.perfilAcesso,
-                    decoration: InputDecoration(
-                      labelText: "Perfil de Acesso",
-                      border: const OutlineInputBorder(),
-                      filled: !widget.canEditPerfil,
-                      fillColor: !widget.canEditPerfil ? Colors.grey[100] : null,
-                      suffixIcon: !widget.canEditPerfil
-                          ? const Icon(Icons.lock, color: Colors.grey, size: 18)
-                          : null,
-                    ),
-                    items: ["Medium", "Oga", "Dirigente", "Portaria", "Suporte", "Assistencia", "Admin", "Administrador"]
-                        .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: widget.canEditPerfil ? (v) => data.updatePerfil(v!) : null,
+                  child: Builder(
+                    builder: (context) {
+                      final options = ["Medium", "Oga", "Dirigente", "Portaria", "Suporte", "Assistencia", "Admin", "Administrador"];
+                      
+                      // Normalização para evitar crash caso o Firestore retorne "medium" (minúsculo)
+                      String? normalizedValue;
+                      if (data.perfilAcesso != null) {
+                        normalizedValue = options.firstWhere(
+                          (e) => e.toLowerCase() == data.perfilAcesso!.toLowerCase(),
+                          orElse: () => options.first,
+                        );
+                      }
+
+                      return DropdownButtonFormField<String>(
+                        value: normalizedValue,
+                        decoration: InputDecoration(
+                          labelText: "Perfil de Acesso",
+                          border: const OutlineInputBorder(),
+                          filled: !widget.canEditPerfil,
+                          fillColor: !widget.canEditPerfil ? Colors.grey[100] : null,
+                          suffixIcon: !widget.canEditPerfil
+                              ? const Icon(Icons.lock, color: Colors.grey, size: 18)
+                              : null,
+                        ),
+                        items: options
+                            .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        onChanged: widget.canEditPerfil ? (v) => data.updatePerfil(v!) : null,
+                      );
+                    }
                   ),
                 ),
               ),

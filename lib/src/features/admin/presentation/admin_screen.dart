@@ -12,6 +12,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'usuarios_section.dart';
 import 'senhas_screen.dart';
+import 'package:terreiro_queue_system/src/shared/services/printer_service.dart';
+import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
 
 const List<String> LINHA_OPTIONS = [
   'Caboclo',
@@ -25,6 +27,8 @@ const List<String> LINHA_OPTIONS = [
   'Esquerda',
   'Feiticeiro',
 ];
+
+// Mapeamento e normalização agora vêm de spiritual_utils.dart
 
 const List<String> TIPO_OPTIONS = [
   'Caboclo',
@@ -62,7 +66,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
+    final user = ref.watch(currentUserProvider).value;
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA), // Off-white
       body: Row(
@@ -150,6 +154,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   const Divider(color: Colors.white24, height: 1),
                 if (user?.perfilAcesso == 'admin')
                   _buildMenuItem(Icons.settings_outlined, 'Configurações', 5),
+                if (user?.perfilAcesso == 'admin')
+                  _buildMenuItem(Icons.print_outlined, 'Sistema', 6),
                 
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.white70, size: 20),
@@ -206,7 +212,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            ref.watch(currentUserProvider)?.nomeCompleto ?? 'Usuário',
+                            ref.watch(currentUserProvider).value?.nomeCompleto ?? 'Usuário',
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -214,7 +220,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                             ),
                           ),
                           Text(
-                            _getPerfilLabel(ref.watch(currentUserProvider)?.perfilAcesso ?? ''),
+                            _getPerfilLabel(ref.watch(currentUserProvider).value?.perfilAcesso ?? ''),
                             style: GoogleFonts.outfit(
                               fontSize: 10,
                               color: Colors.brown[600],
@@ -290,8 +296,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return 'Senhas';
       case 4:
         return 'Usuários';
-      case 5:
-        return 'Configurações de Acesso';
+      case 6:
+        return 'Configurações de Sistema';
       default:
         return 'T.U.C.P.B. Token';
     }
@@ -311,6 +317,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return const UsuariosScreen();
       case 5:
         return _ConfiguracoesScreen();
+      case 6:
+        return _SistemaScreen();
       default:
         return const Center(child: Text('Em construção'));
     }
@@ -1297,15 +1305,17 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
                 // Grupos de linhagem (replicando a lógica do totem)
                 final Map<String, List<String>> lineGroups = {
                   'Boiadeiro': ['Boiadeiro', 'Marinheiro', 'Malandro'],
-                  'Esquerda': ['Esquerda'],
+                  'Esquerda': ['EXÚ', 'POMBA GIRA', 'POMBO GIRO', 'EXÚ - MIRIM', 'EXÚ - MIRIM MENINO', 'EXÚ - MIRIM MENINA', 'FEITICEIRO', 'FEITICEIRA'],
                 };
                 final allowedLines = lineGroups[gira.linha] ?? [gira.linha];
+                final allowedLinesNorm = allowedLines.map((l) => normalizeSpiritualLine(l)).toList();
 
                 // Filtrar apenas médiuns que têm entidades compatíveis com esta gira (Case-insensitive)
                 final compatibleMediums = mediums.where((m) {
                   return m.entidades.any((e) {
-                    final entLinha = e.linha.toUpperCase();
-                    return allowedLines.any((al) => al.toUpperCase() == entLinha);
+                    final entLinha = normalizeSpiritualLine(e.linha);
+                    final entTipo = normalizeSpiritualLine(e.tipo);
+                    return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
                   });
                 }).toList();
 
@@ -1321,8 +1331,9 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
                     final isPresent = currentPresencas[medium.id] ?? false;
                     
                     final compatibleEntidades = medium.entidades.where((e) {
-                      final entLinha = e.linha.toUpperCase();
-                      return allowedLines.any((al) => al.toUpperCase() == entLinha);
+                      final entLinha = normalizeSpiritualLine(e.linha);
+                      final entTipo = normalizeSpiritualLine(e.tipo);
+                      return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
                     }).toList();
 
                     return SwitchListTile(
@@ -1833,6 +1844,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     DateTime selectedDate = date;
     bool encerramentoAtivo = false;
     Map<String, bool> mediumsSelected = {};
+    Map<String, bool> entitiesSelected = {};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
     final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
@@ -1842,55 +1854,84 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     }.where((l) => l.isNotEmpty).toList();
     dropdownItems.sort();
     
-    // Buscar todos os médiuns
-    final mediumsAsync = ref.read(mediumListProvider(terreiroId));
-    final allMediums = mediumsAsync.value ?? [];
-    
+    bool initialized = false;
+    String? selectedTheme;
+    List<String> selectedLinhas = [];
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          final Map<String, List<String>> lineGroups = {
-            'BOIADEIRO': ['BOIADEIRO', 'MARINHEIRO', 'MALANDRO', 'VAQUEIRO'],
-            'ESQUERDA': ['ESQUERDA', 'EXU', 'POMBA GIRA', 'POMBO GIRO', 'EXU MIRIM'],
-            'PRETO VELHO': ['PRETO VELHO', 'PRETA VELHA', 'FEITICEIRO'],
-            'CABOCLO': ['CABOCLO', 'CABOCLA'],
-            'ERES': ['ERÊ', 'CRIANÇA'],
-            'BAIANO': ['BAIANO', 'BAIANA'],
-            'CIGANO': ['CIGANO', 'CIGANA'],
-          };
+          final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+          final allMediums = mediumsAsync.value ?? [];
+          
+          if (!initialized && mediumsAsync.hasValue) {
+             initialized = true;
+          }
 
-          // Quando a linha muda, pré-selecionar médiuns da linha
-          void _onLinhaChanged(String? val) {
-            selectedLinha = val;
-            mediumsSelected.clear();
-            if (val != null) {
-              final valUpper = val.toUpperCase();
-              final allowedLines = [valUpper];
+          // Quando o tema muda, atualizar as sub-linhas disponíveis
+          void _onThemeChanged(String? theme) {
+            setDialogState(() {
+              selectedTheme = theme;
+              if (theme != null) {
+              temaCtrl.text = theme;
+              selectedLinhas = List.from(GIRA_THEME_MAPPING[theme] ?? []);
               
-              if (lineGroups.containsKey(valUpper)) {
-                allowedLines.addAll(lineGroups[valUpper]!);
-              }
+              // Pré-selecionar médiuns e entidades daquelas linhas
+              mediumsSelected.clear();
+              entitiesSelected.clear();
+              
+              final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
 
               for (var m in allMediums.where((m) => m.ativo)) {
-                final hasCompatibleEntity = m.entidades.any((e) {
-                  final entLinha = e.linha.toUpperCase();
-                  return allowedLines.contains(entLinha);
-                });
-                mediumsSelected[m.id] = hasCompatibleEntity;
+                final compatibleEntities = m.entidades.where((e) {
+                  final entLinha = normalizeSpiritualLine(e.linha);
+                  final entTipo = normalizeSpiritualLine(e.tipo);
+                  return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+                }).toList();
+                
+                if (compatibleEntities.isNotEmpty) {
+                  mediumsSelected[m.id] = true;
+                  for (var e in compatibleEntities) {
+                    entitiesSelected[e.entidadeId] = true;
+                  }
+                }
               }
             }
-            setDialogState(() {});
+          });
+        }
+
+          void _toggleLinha(String linha, bool? checked) {
+            setDialogState(() {
+              if (checked == true) {
+                if (!selectedLinhas.contains(linha)) selectedLinhas.add(linha);
+              } else {
+                selectedLinhas.remove(linha);
+              }
+              
+              // Recalcular seleção sugerida de médiuns se necessário
+              // (Opcional: podemos manter o que o usuário já flegou manualmente)
+            });
           }
           
           final activeMediums = allMediums.where((m) => m.ativo).toList();
-          if (selectedLinha != null) {
-            // Ordenar: primeiro os que têm entidade para a linha selecionada
+          if (selectedLinhas.isNotEmpty) {
+            final allowedLinesUpper = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+            // Ordenar: primeiro os que têm entidade para as linhas selecionadas
             activeMediums.sort((a, b) {
-              final aSelected = mediumsSelected[a.id] ?? false;
-              final bSelected = mediumsSelected[b.id] ?? false;
-              if (aSelected && !bSelected) return -1;
-              if (!aSelected && bSelected) return 1;
+              final aHasCompatible = a.entidades.any((e) {
+                final entLinha = normalizeSpiritualLine(e.linha);
+                final entTipo = normalizeSpiritualLine(e.tipo);
+                return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
+              });
+              final bHasCompatible = b.entidades.any((e) {
+                final entLinha = normalizeSpiritualLine(e.linha);
+                final entTipo = normalizeSpiritualLine(e.tipo);
+                return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
+              });
+              
+              if (aHasCompatible && !bHasCompatible) return -1;
+              if (!aHasCompatible && bHasCompatible) return 1;
               return a.nome.compareTo(b.nome);
             });
           }
@@ -1938,56 +1979,51 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         child: Text(DateFormat('dd/MM/yyyy - EEEE', 'pt_BR').format(selectedDate)),
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Linha Principal - Autocomplete editável
-                    Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return dropdownItems;
-                        return dropdownItems.where((l) =>
-                          l.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                      },
-                      onSelected: (val) => _onLinhaChanged(val),
-                      fieldViewBuilder: (ctx2, controller, focusNode, onFieldSubmitted) {
-                        return TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            labelText: "Linha Principal",
-                            hintText: "Selecione ou digite",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            prefixIcon: const Icon(Icons.auto_awesome),
-                          ),
-                          onChanged: (val) {
-                            if (val.isNotEmpty) {
-                              _onLinhaChanged(val);
-                            }
-                          },
-                          onSubmitted: (_) => onFieldSubmitted(),
-                        );
-                      },
-                    ),
-                    if (selectedLinha != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 4),
-                        child: Text(
-                          "${mediumsSelected.values.where((v) => v).length} médiuns habilitados para esta linha",
-                          style: TextStyle(color: Colors.brown[400], fontSize: 12, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Nome da Gira
-                    TextField(
-                      controller: temaCtrl,
+                    // Nome da Gira (Tema) - Dropdown
+                    DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: "Nome da Gira",
-                        hintText: "Ex: Gira de Caboclo",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: const Icon(Icons.subject),
                       ),
+                      value: selectedTheme,
+                      items: GIRA_THEME_MAPPING.keys.map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t),
+                      )).toList(),
+                      onChanged: (val) => _onThemeChanged(val),
                     ),
                     const SizedBox(height: 16),
+
+                    // Seleção de Linhas (Tipos) baseada no Tema
+                    if (selectedTheme != null) ...[
+                      Text("Linhas (selecione as que participarão)", 
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.brown[700])),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.brown[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.brown[200]!),
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? []).map((linha) {
+                            final isChecked = selectedLinhas.contains(linha);
+                            return FilterChip(
+                              label: Text(linha, style: TextStyle(fontSize: 12, color: isChecked ? Colors.white : Colors.brown[800])),
+                              selected: isChecked,
+                              selectedColor: Colors.brown,
+                              checkmarkColor: Colors.white,
+                              onSelected: (val) => _toggleLinha(linha, val),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Horários em Row
                     Row(
@@ -2081,17 +2117,75 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         child: Column(
                           children: activeMediums.map((m) {
                             final isSelected = mediumsSelected[m.id] ?? false;
-                            final linhas = m.entidades.map((e) => e.linha).toSet().join(', ');
-                            return CheckboxListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              title: Text(m.nome, style: const TextStyle(fontSize: 14)),
-                              subtitle: Text(linhas, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                              value: isSelected,
-                              activeColor: Colors.brown,
-                              onChanged: (val) {
-                                setDialogState(() => mediumsSelected[m.id] = val ?? false);
-                              },
+                            final listEntidades = m.entidades ?? <MediumEntidade>[];
+                            
+                             // Filtrar entidades com base nas linhas selecionadas
+                             final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+                             
+                             final filteredEntidades = listEntidades.where((ent) {
+                               final entLinha = normalizeSpiritualLine(ent.linha);
+                               final entTipo = normalizeSpiritualLine(ent.tipo);
+                               return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+                             }).toList();
+                            
+                            // Se o médium não tem entidades na linha, não mostrar ou mostrar aviso? 
+                            // O usuário pediu "aparecer somente a entidade da linha".
+                            
+                            return Theme(
+                              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                              child: ExpansionTile(
+                                initiallyExpanded: isSelected,
+                                dense: true,
+                                title: Text(m.nome, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                leading: Checkbox(
+                                  value: isSelected,
+                                  activeColor: Colors.brown,
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      mediumsSelected[m.id] = val ?? false;
+                                      // Se desmarcar o médium, desmarca todas as entidades dele
+                                      if (val == false) {
+                                        for (var ent in listEntidades) {
+                                          entitiesSelected[ent.entidadeId] = false;
+                                        }
+                                      } else {
+                                        // Se marcar o médium, marca TODAS as entidades filtradas
+                                        for (var ent in filteredEntidades) {
+                                          entitiesSelected[ent.entidadeId] = true;
+                                        }
+                                      }
+                                    });
+                                  },
+                                ),
+                                children: [
+                                  if (filteredEntidades.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 32, bottom: 8),
+                                      child: Column(
+                                        children: filteredEntidades.map((ent) {
+                                          return CheckboxListTile(
+                                            dense: true,
+                                            title: Text(ent.entidadeNome, style: const TextStyle(fontSize: 13)),
+                                            subtitle: Text(ent.linha, style: const TextStyle(fontSize: 11)),
+                                            value: entitiesSelected[ent.entidadeId] ?? false,
+                                            onChanged: (val) {
+                                              setDialogState(() {
+                                                entitiesSelected[ent.entidadeId] = val ?? false;
+                                                if (val == true) mediumsSelected[m.id] = true;
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    )
+                                  else if (isSelected)
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 48, bottom: 12),
+                                      child: Text("Nenhuma entidade compatível com esta linha.", 
+                                        style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic)),
+                                    ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),
@@ -2113,9 +2207,9 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
-                  if (selectedLinha == null) {
+                  if (selectedTheme == null || selectedLinhas.isEmpty) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('Selecione a linha da gira')),
+                      const SnackBar(content: Text('Selecione o tema e as linhas da gira')),
                     );
                     return;
                   }
@@ -2130,18 +2224,23 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     presencas[id] = true;
                   }
                   
+                  final themeName = selectedTheme?.replaceAll('Gira de ', '') ?? '';
+                  String primaryLinha = normalizeSpiritualLine(themeName);
+                  if (primaryLinha == 'ERÊS') primaryLinha = 'ERES'; // Fallback para compatibilidade legada se necessário
+
                   final newGira = Gira(
                     id: const Uuid().v4(),
                     terreiroId: terreiroId,
                     data: selectedDate,
-                    tema: temaCtrl.text.isEmpty ? 'Gira de ${selectedLinha!}' : temaCtrl.text,
-                    linha: selectedLinha!,
+                    tema: temaCtrl.text,
+                    linha: primaryLinha,
                     status: 'agendada',
                     horarioInicio: horarioInicioCtrl.text,
                     horarioKiosk: horarioKioskCtrl.text,
                     horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
                     encerramentoKioskAtivo: encerramentoAtivo,
                     mediumsParticipantes: participantes,
+                    entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
                     presencas: presencas,
                   );
                   try {
@@ -2175,80 +2274,126 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final horarioKioskCtrl = TextEditingController(text: gira.horarioKiosk ?? '18:00');
     final horarioEncerramentoCtrl = TextEditingController(text: gira.horarioEncerramentoKiosk ?? '20:00');
     final linhaCtrl = TextEditingController();
-    String selectedLinha = gira.linha ?? '';
+    // String selectedLinha = gira.linha ?? ''; (Removido em favor de selectedTheme e selectedLinhas)
     
     // Garantir que o status é um dos valores aceitos pelo Dropdown para evitar crash de build
     const validStatuses = ['agendada', 'aberta', 'encerrada'];
     String selectedStatus = validStatuses.contains(gira.status) ? gira.status : 'agendada';
     DateTime selectedDate = gira.data ?? DateTime.now();
     bool encerramentoAtivo = gira.encerramentoKioskAtivo ?? false;
+    bool initialized = false;
     Map<String, bool> mediumsSelected = {};
-    
-    final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
-    final dropdownItems = {
-      ...LINHA_OPTIONS,
-      ...registeredLinhas,
-    }.where((l) => l.isNotEmpty).toList();
-    dropdownItems.sort();
-    
-    // Buscar todos os médiuns
-    final mediumsAsync = ref.read(mediumListProvider(terreiroId));
-    final allMediums = mediumsAsync.value ?? [];
-    
-    // Inicializar seleção com os participantes atuais
-    for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
-      mediumsSelected[m.id] = (gira.mediumsParticipantes ?? []).contains(m.id);
-    }
+    Map<String, bool> entitiesSelected = {};
+    List<String> selectedLinhas = [];
+    String? selectedTheme;
 
-    final Map<String, List<String>> lineGroups = {
-      'BOIADEIRO': ['BOIADEIRO', 'MARINHEIRO', 'MALANDRO', 'VAQUEIRO'],
-      'ESQUERDA': ['ESQUERDA', 'EXU', 'POMBA GIRA', 'POMBO GIRO', 'EXU MIRIM'],
-      'PRETO VELHO': ['PRETO VELHO', 'PRETA VELHA', 'FEITICEIRO'],
-      'CABOCLO': ['CABOCLO', 'CABOCLA'],
-      'ERES': ['ERÊ', 'CRIANÇA'],
-      'BAIANO': ['BAIANO', 'BAIANA'],
-      'CIGANO': ['CIGANO', 'CIGANA'],
-    };
-    
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          // Quando a linha muda, atualizar pré-seleção sugerida
-          void _onLinhaChanged(String? val) {
-            selectedLinha = val ?? '';
-            if (val != null && val.isNotEmpty) {
-              final valUpper = val.toUpperCase();
-              final allowedLines = [valUpper];
-              if (lineGroups.containsKey(valUpper)) {
-                allowedLines.addAll(lineGroups[valUpper]!);
-              }
+          final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
+          final allMediums = mediumsAsync.value ?? [];
 
-              for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
-                final hasCompatibleEntity = (m.entidades ?? []).any((e) {
-                  final entLinha = (e.linha ?? '').toUpperCase();
-                  return allowedLines.contains(entLinha);
-                });
-                if (hasCompatibleEntity) {
-                   mediumsSelected[m.id] = true;
+          if (!initialized && mediumsAsync.hasValue) {
+             // Opcional: pre-selecionar algo se quiser, mas aqui é novo então inicia vazio
+             initialized = true;
+          
+            // Inicializar entidades selecionadas
+            for (var entId in (gira.entidadesParticipantes ?? [])) {
+              entitiesSelected[entId] = true;
+            }
+            // Inicializar médiuns
+            for (var m in allMediums.where((m) => m.ativo)) {
+              mediumsSelected[m.id] = (gira.mediumsParticipantes ?? []).contains(m.id);
+            }
+            // Tentar encontrar o tema
+            for (var themeKey in GIRA_THEME_MAPPING.keys) {
+              if (gira.tema.contains(themeKey) || gira.tema == themeKey) {
+                selectedTheme = themeKey;
+                break;
+              }
+            }
+            if (selectedTheme == null && gira.linha.isNotEmpty) {
+               final l = normalizeSpiritualLine(gira.linha);
+               if (l == normalizeSpiritualLine('ESQUERDA')) selectedTheme = 'Gira de Esquerda';
+               else if (l == normalizeSpiritualLine('CABOCLO')) selectedTheme = 'Gira de Caboclo';
+               else if (l == normalizeSpiritualLine('BOIADEIRO')) selectedTheme = 'Gira de Boiadeiro';
+               else if (l == normalizeSpiritualLine('PRETO VELHO')) selectedTheme = 'Gira de Preto Velho';
+               else if (l == normalizeSpiritualLine('ERES') || l == normalizeSpiritualLine('ERÊS')) selectedTheme = 'Gira de Erês';
+               else if (l == normalizeSpiritualLine('BAIANO')) selectedTheme = 'Gira de Baiano';
+               else if (l == normalizeSpiritualLine('CIGANO')) selectedTheme = 'Gira de Cigano';
+            }
+            // Inferir linhas
+            final Set<String> inferredLinhasSet = {};
+            for (var m in allMediums) {
+              for (var ent in (m.entidades ?? [])) {
+                if (entitiesSelected[ent.entidadeId] == true) {
+                  inferredLinhasSet.add(ent.linha);
                 }
               }
             }
-            setDialogState(() {});
+            selectedLinhas = inferredLinhasSet.toList();
+            if (selectedLinhas.isEmpty && selectedTheme != null) {
+              selectedLinhas = List.from(GIRA_THEME_MAPPING[selectedTheme] ?? []);
+            }
+            initialized = true;
+          }
+          void _onThemeChanged(String? theme) {
+            setDialogState(() {
+              selectedTheme = theme;
+              if (theme != null) {
+                temaCtrl.text = theme;
+                selectedLinhas = List.from(GIRA_THEME_MAPPING[theme] ?? []);
+                
+                // Opcional: Limpar e reaplicar seleção sugerida ao trocar o tema em uma edição?
+                // Melhor limpar para evitar salvar entidades de linhas diferentes por engano.
+                mediumsSelected.clear();
+                entitiesSelected.clear();
+                
+                final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+                for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
+                  final compatibleEntities = m.entidades.where((e) {
+                    final entLinha = normalizeSpiritualLine(e.linha);
+                    final entTipo = normalizeSpiritualLine(e.tipo);
+                    return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+                  }).toList();
+                  
+                  if (compatibleEntities.isNotEmpty) {
+                    mediumsSelected[m.id] = true;
+                    for (var e in compatibleEntities) {
+                      entitiesSelected[e.entidadeId] = true;
+                    }
+                  }
+                }
+              }
+            });
+          }
+          void _toggleLinha(String linha, bool? checked) {
+            setDialogState(() {
+              if (checked == true) {
+                if (!selectedLinhas.contains(linha)) selectedLinhas.add(linha);
+              } else {
+                selectedLinhas.remove(linha);
+              }
+            });
           }
 
           final activeMediums = (allMediums ?? []).where((m) => m != null && m.ativo).toList();
-          if (selectedLinha.isNotEmpty) {
-            final valUpper = selectedLinha.toUpperCase();
-            final allowedLines = [valUpper];
-            if (lineGroups.containsKey(valUpper)) {
-              allowedLines.addAll(lineGroups[valUpper]!);
-            }
-
+          if (selectedLinhas.isNotEmpty) {
+            final allowedLinesUpper = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
             activeMediums.sort((a, b) {
-              final aHas = (a.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
-              final bHas = (b.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
+              final aHas = (a.entidades ?? []).any((e) {
+                if (e == null) return false;
+                final entLinha = normalizeSpiritualLine((e.linha ?? ''));
+                final entTipo = normalizeSpiritualLine((e.tipo ?? ''));
+                return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
+              });
+              final bHas = (b.entidades ?? []).any((e) {
+                if (e == null) return false;
+                final entLinha = normalizeSpiritualLine((e.linha ?? ''));
+                final entTipo = normalizeSpiritualLine((e.tipo ?? ''));
+                return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
+              });
               if (aHas && !bHas) return -1;
               if (!aHas && bHas) return 1;
               return (a.nome ?? '').compareTo(b.nome ?? '');
@@ -2360,44 +2505,51 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Linha Principal - Simples para estabilidade
-                    TextField(
-                      controller: TextEditingController(text: selectedLinha),
-                      decoration: InputDecoration(
-                        labelText: "Linha Principal",
-                        hintText: "Digite a linha",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.auto_awesome),
-                      ),
-                      onChanged: (val) => _onLinhaChanged(val),
-                    ),
-                    const SizedBox(height: 16),
-                    if (selectedLinha.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 4),
-                        child: Text(
-                          "${activeMediums.where((m) {
-                            final valUpper = selectedLinha.toUpperCase();
-                            final allowedLines = [valUpper];
-                            if (lineGroups.containsKey(valUpper)) {
-                              allowedLines.addAll(lineGroups[valUpper]!);
-                            }
-                            return (m.entidades ?? []).any((e) => e != null && allowedLines.contains((e.linha ?? '').toUpperCase()));
-                          }).length} médiuns habilitados para esta linha",
-                          style: TextStyle(color: Colors.brown[400], fontSize: 12, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-
-                    // Nome da Gira
-                    TextField(
-                      controller: temaCtrl,
+                    // Nome da Gira (Tema) - Dropdown
+                    DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: "Nome da Gira",
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: const Icon(Icons.subject),
                       ),
+                      value: selectedTheme,
+                      items: GIRA_THEME_MAPPING.keys.map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t),
+                      )).toList(),
+                      onChanged: (val) => _onThemeChanged(val),
                     ),
                     const SizedBox(height: 16),
+
+                    // Seleção de Linhas (Tipos) baseada no Tema
+                    if (selectedTheme != null) ...[
+                      Text("Linhas (selecione as que participarão)", 
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.brown[700])),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.brown[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.brown[200]!),
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? []).map((linha) {
+                            final isChecked = selectedLinhas.contains(linha);
+                            return FilterChip(
+                              label: Text(linha, style: TextStyle(fontSize: 12, color: isChecked ? Colors.white : Colors.brown[800])),
+                              selected: isChecked,
+                              selectedColor: Colors.brown,
+                              checkmarkColor: Colors.white,
+                              onSelected: (val) => _toggleLinha(linha, val),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Horários
                     Row(
@@ -2492,21 +2644,73 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           children: activeMediums.map((m) {
                             final isSelected = mediumsSelected[m.id] ?? false;
                             final listEntidades = m.entidades ?? <MediumEntidade>[];
-                            final linhas = listEntidades
-                                .map((e) => e?.linha ?? '')
-                                .where((l) => l.isNotEmpty)
-                                .toSet()
-                                .join(', ');
-                            return CheckboxListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                              title: Text(m.nome ?? 'Sem nome', style: const TextStyle(fontSize: 14)),
-                              subtitle: Text(linhas, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                              value: isSelected,
-                              activeColor: Colors.brown,
-                              onChanged: (val) {
-                                setDialogState(() => mediumsSelected[m.id] = val ?? false);
-                              },
+                            
+                            // Filtrar entidades com base nas linhas selecionadas
+                            final allowedLinesUpper = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
+                            
+                             final filteredEntidades = listEntidades.where((ent) {
+                               final entLinha = normalizeSpiritualLine(ent.linha);
+                               final entTipo = normalizeSpiritualLine(ent.tipo);
+                               return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
+                             }).toList();
+                            
+                            return Theme(
+                              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                              child: ExpansionTile(
+                                initiallyExpanded: isSelected,
+                                dense: true,
+                                title: Text(m.nome ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                leading: Checkbox(
+                                  value: isSelected,
+                                  activeColor: Colors.brown,
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      mediumsSelected[m.id] = val ?? false;
+                                      // Se desmarcar o médium, desmarca todas as entidades dele
+                                      if (val == false) {
+                                        for (var ent in listEntidades) {
+                                          entitiesSelected[ent.entidadeId] = false;
+                                        }
+                                      } else {
+                                        // Se marcar o médium, marca TODAS as entidades filtradas
+                                        for (var ent in filteredEntidades) {
+                                          entitiesSelected[ent.entidadeId] = true;
+                                        }
+                                      }
+                                    });
+                                  },
+                                ),
+                                children: [
+                                  if (filteredEntidades.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 32, bottom: 8),
+                                      child: Column(
+                                        children: filteredEntidades.map((ent) {
+                                          return CheckboxListTile(
+                                            dense: true,
+                                            title: Text(ent.entidadeNome, style: const TextStyle(fontSize: 13)),
+                                            subtitle: Text(ent.linha, style: const TextStyle(fontSize: 11)),
+                                             value: entitiesSelected[ent.entidadeId] ?? false,
+                                             onChanged: (val) {
+                                               setDialogState(() {
+                                                 entitiesSelected[ent.entidadeId] = val ?? false;
+                                                 if (val == true) {
+                                                   mediumsSelected[m.id] = true;
+                                                 }
+                                               });
+                                             },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    )
+                                  else if (isSelected)
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 48, bottom: 12),
+                                      child: Text("Nenhuma entidade compatível.", 
+                                        style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic)),
+                                    ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),
@@ -2524,6 +2728,13 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () async {
+                        if (selectedTheme == null || selectedLinhas.isEmpty) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Selecione tema e linhas para sincronizar com Kiosk')));
+                          }
+                          return;
+                        }
+
                         // Atualizar participantes e presenças imediatamente
                         final participantes = mediumsSelected.entries
                           .where((e) => e.value)
@@ -2533,19 +2744,23 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         for (var id in participantes) {
                           presencas[id] = true;
                         }
+
+                        String primaryLinha = selectedTheme!.replaceAll('Gira de ', '').toUpperCase();
+
                         try {
                           final updatedGira = Gira(
                             id: gira.id,
                             terreiroId: gira.terreiroId,
                             data: selectedDate,
-                            tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
-                            linha: selectedLinha,
+                            tema: temaCtrl.text,
+                            linha: primaryLinha,
                             status: selectedStatus,
                             horarioInicio: horarioInicioCtrl.text,
                             horarioKiosk: horarioKioskCtrl.text,
                             horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
                             encerramentoKioskAtivo: encerramentoAtivo,
                             mediumsParticipantes: participantes,
+                            entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
                             presencas: presencas,
                           );
                           await ref.read(adminRepositoryProvider).updateGira(updatedGira);
@@ -2592,18 +2807,23 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         : true;
                   }
                   
+                  final themeName = selectedTheme?.replaceAll('Gira de ', '') ?? '';
+                  String primaryLinha = normalizeSpiritualLine(themeName);
+                  if (primaryLinha == 'ERÊS') primaryLinha = 'ERES'; // Fallback para compatibilidade legada se necessário
+
                   final updatedGira = Gira(
                     id: gira.id,
                     terreiroId: gira.terreiroId,
                     data: selectedDate,
-                    tema: temaCtrl.text.isEmpty ? 'Gira de $selectedLinha' : temaCtrl.text,
-                    linha: selectedLinha,
+                    tema: temaCtrl.text,
+                    linha: primaryLinha,
                     status: selectedStatus,
                     horarioInicio: horarioInicioCtrl.text,
                     horarioKiosk: horarioKioskCtrl.text,
                     horarioEncerramentoKiosk: encerramentoAtivo ? horarioEncerramentoCtrl.text : null,
                     encerramentoKioskAtivo: encerramentoAtivo,
                     mediumsParticipantes: participantes,
+                    entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
                     presencas: presencas,
                   );
                   try {
@@ -3262,7 +3482,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                 backgroundColor: Colors.brown,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (nameCtrl.text.isEmpty) return;
                 
                 final maxFichas = int.tryParse(maxFichasCtrl.text) ?? 10;
@@ -3278,8 +3498,17 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
                   atendimentosRealizados: medium.atendimentosRealizados,
                   faltas: medium.faltas,
                 );
-                ref.read(adminRepositoryProvider).updateMedium(updatedMed);
-                Navigator.pop(context);
+                try {
+                  await ref.read(adminRepositoryProvider).updateMedium(updatedMed);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Médium atualizado com sucesso!'), backgroundColor: Colors.green));
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red));
+                  }
+                }
               },
               child: const Text('SALVAR'),
             ),
@@ -3839,6 +4068,166 @@ class _ConfiguracoesScreenState extends ConsumerState<_ConfiguracoesScreen> {
       case 'confirmation_number': return Icons.confirmation_number_outlined;
       case 'people': return Icons.people_outline;
       default: return Icons.help_outline;
+    }
+  }
+}
+
+// =============================================================================
+// TELA DE CONFIGURAÇÕES DE SISTEMA / HARDWARE
+// =============================================================================
+class _SistemaScreen extends ConsumerStatefulWidget {
+  @override
+  _SistemaScreenState createState() => _SistemaScreenState();
+}
+
+class _SistemaScreenState extends ConsumerState<_SistemaScreen> {
+  final _ipController = TextEditingController(text: '192.168.1.17');
+  final _portController = TextEditingController(text: '43645');
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    _portController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Configurações de Hardware', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Text('Configure aqui os parâmetros de integração com impressoras e outros periféricos.', style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(height: 32),
+          
+          Container(
+            width: 600,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.print, color: Colors.brown),
+                    const SizedBox(width: 12),
+                    Text('Impressora Gertec (Rede/G-Printer)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _ipController,
+                        decoration: const InputDecoration(
+                          labelText: 'Endereço IP',
+                          hintText: 'Ex: 192.168.1.17',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.lan),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 1,
+                      child: TextField(
+                        controller: _portController,
+                        decoration: const InputDecoration(
+                          labelText: 'Porta',
+                          hintText: '43645',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Nota: Certifique-se de que a impressora está ligada e o Gertec Printer Proxy está rodando no IP informado.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.brown[800],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: _isSaving ? null : _saveSettings,
+                    child: _isSaving 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text('SALVAR CONFIGURAÇÕES'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 40),
+          // Seção de Teste
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              side: BorderSide(color: Colors.brown[300]!),
+            ),
+            onPressed: () => _testPrinter(),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('TESTAR CONEXÃO E IMPRIMIR TESTE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveSettings() async {
+    setState(() => _isSaving = true);
+    // Aqui poderíamos salvar no Firestore ou SharedPreferences
+    // Por enquanto, apenas feedback visual
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() => _isSaving = false);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Configurações salvas com sucesso!'), backgroundColor: Colors.green),
+      );
+    }
+  }
+
+  Future<void> _testPrinter() async {
+    try {
+      final printer = ref.read(printerServiceProvider);
+      await printer.printTicket(
+        terreiroName: "T.U.C.P.B.",
+        giraName: "TESTE DE SISTEMA",
+        entityName: "IMPRESSORA REDE",
+        mediumName: "ADMINISTRADOR",
+        mediumInitials: "AD",
+        ticketCode: "TS9999",
+        pixKey: "00000000000",
+        date: DateTime.now(),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha no teste: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 }

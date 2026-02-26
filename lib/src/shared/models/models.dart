@@ -18,7 +18,7 @@ class TimestampConverter implements JsonConverter<DateTime, Object> {
   Object toJson(DateTime object) => Timestamp.fromDate(object);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Gira {
   final String id;
   final String? terreiroId;
@@ -37,9 +37,20 @@ class Gira {
   final String horarioKiosk; // horário de liberação do kiosk
   final String? horarioEncerramentoKiosk; // horário encerramento (opcional)
   final bool encerramentoKioskAtivo; // flag para ativar encerramento automático
+  @JsonKey(readValue: _readMediumsParticipantes)
   final List<String> mediumsParticipantes; // IDs dos médiuns participantes
+  @JsonKey(readValue: _readEntidadesParticipantes)
+  final List<String> entidadesParticipantes; // IDs das entidades específicas selecionadas
 
+  @JsonKey(readValue: _readPresencas)
   final Map<String, bool> presencas; // mediumId -> presente (true/false)
+
+  static Object? _readMediumsParticipantes(Map json, String key) => 
+      json['mediumsParticipantes'] ?? json['mediums_participantes'] ?? [];
+  static Object? _readEntidadesParticipantes(Map json, String key) => 
+      json['entidadesParticipantes'] ?? json['entidades_participantes'] ?? [];
+  static Object? _readPresencas(Map json, String key) => 
+      json['presencas'] ?? json['presences'] ?? {};
 
   const Gira({
     required this.id,
@@ -54,6 +65,7 @@ class Gira {
     this.horarioEncerramentoKiosk,
     this.encerramentoKioskAtivo = false,
     this.mediumsParticipantes = const [],
+    this.entidadesParticipantes = const [],
     this.presencas = const {},
   });
 
@@ -67,7 +79,7 @@ class Gira {
   Map<String, dynamic> toJson() => _$GiraToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Entidade {
   final String id;
   final String terreiroId;
@@ -87,7 +99,7 @@ class Entidade {
   Map<String, dynamic> toJson() => _$EntidadeToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class MediumEntidade {
   @JsonKey(defaultValue: '')
   final String entidadeId;
@@ -115,7 +127,7 @@ class MediumEntidade {
   Map<String, dynamic> toJson() => _$MediumEntidadeToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Medium {
   final String id;
   final String? terreiroId;
@@ -160,7 +172,7 @@ class Medium {
 }
 
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Ticket {
   final String id;
   final String terreiroId;
@@ -204,7 +216,7 @@ class Ticket {
   Map<String, dynamic> toJson() => _$TicketToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Usuario {
   final String id;
   final String terreiroId;

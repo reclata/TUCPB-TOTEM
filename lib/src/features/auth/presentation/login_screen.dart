@@ -1,8 +1,9 @@
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../shared/utils/spiritual_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,17 +19,76 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   Future<void> _login() async {
+    final input = _emailCtrl.text.trim();
+    final passwordInput = _passCtrl.text.trim();
+    
+    if (input.isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Digite seu Email ou CPF.")));
+       return;
+    }
+
     setState(() => _isLoading = true);
     try {
+      String email = input;
+      String password = passwordInput.isEmpty ? "TUCPB" : passwordInput;
+
+      // Check if input is CPF (only digits or formatted)
+      final isCPF = RegExp(r'^\d+$').hasMatch(input.replaceAll(RegExp(r'[^\d]'), ''));
+      
+      if (isCPF) {
+        final cpfRaw = input.replaceAll(RegExp(r'[^\d]'), '');
+        // Search user by CPF in dadosPessoais.cpf
+        final snap = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .where('dadosPessoais.cpf', isEqualTo: input) // Search with formatting if user typed it
+            .get();
+        
+        var docs = snap.docs;
+        if (docs.isEmpty) {
+           // Try searching without formatting
+           final snap2 = await FirebaseFirestore.instance
+              .collection('usuarios')
+              .where('dadosPessoais.cpf', isEqualTo: cpfRaw)
+              .get();
+           docs = snap2.docs;
+        }
+
+        if (docs.isEmpty) {
+          throw "Usuário com CPF $input não encontrado.";
+        }
+
+        final userDoc = docs.first.data();
+        email = userDoc['email'] ?? '';
+        if (email.isEmpty) throw "Usuário encontrado mas sem email vinculado.";
+        
+        // --- RESTRICTION LOGIC ---
+        final nameUpper = (userDoc['nome'] ?? userDoc['nomeCompleto'] ?? '').toString().toUpperCase();
+        bool isAllowed = false;
+        for (var allowed in ALLOWED_TABLET_USERS) {
+           if (nameUpper.contains(allowed.toUpperCase())) {
+             isAllowed = true;
+             break;
+           }
+        }
+        
+        if (!isAllowed) {
+           throw "Acesso não autorizado para o sistema Tablet.";
+        }
+      }
+
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text.trim(),
+        email: email,
+        password: password,
       );
+      
       // Let the router redirect based on auth state listener
       if (mounted) context.go('/admin'); // Default destination
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+        String msg = e.toString();
+        if (msg.contains('invalid-credential')) msg = "Credenciais inválidas.";
+        if (msg.contains('user-not-found')) msg = "Usuário não encontrado.";
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $msg"), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -111,9 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
                TextField(
                  controller: _emailCtrl, 
                  decoration: InputDecoration(
-                   labelText: 'Email', 
+                   labelText: 'Email ou CPF', 
                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                   prefixIcon: const Icon(Icons.email, color: Colors.brown),
+                   prefixIcon: const Icon(Icons.person, color: Colors.brown),
                  ),
                ),
                const SizedBox(height: 16),

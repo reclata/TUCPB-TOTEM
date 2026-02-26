@@ -34,24 +34,40 @@ class AbaEntidades extends StatelessWidget {
                      Row(
                        children: [
                          Expanded(
-                           child: DropdownButtonFormField<String>(
-                             value: data.entidades[index].linha,
-                             decoration: const InputDecoration(labelText: "Linha", border: OutlineInputBorder()),
-                             items: ["CABOCLO", "ERÊ", "PRETO VELHO", "BOIADEIRO", "BAIANO", "MALANDRO", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM", "FEITICEIRO", "CIGANO"]
-                                 .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                             onChanged: (v) { data.entidades[index].linha = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-                             data.notifyListeners(); },
+                           child: Builder(
+                             builder: (context) {
+                               final options = ["CABOCLO", "ERÊ", "PRETO VELHO", "BOIADEIRO", "BAIANO", "MALANDRO", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM", "FEITICEIRO", "CIGANO"];
+                               final items = options.toSet().toList();
+                               if (data.entidades[index].linha.isNotEmpty && !items.contains(data.entidades[index].linha)) {
+                                 items.add(data.entidades[index].linha);
+                               }
+                               return DropdownButtonFormField<String>(
+                                 value: data.entidades[index].linha,
+                                 decoration: const InputDecoration(labelText: "Linha", border: OutlineInputBorder()),
+                                 items: items.map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                                 onChanged: (v) { data.entidades[index].linha = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+                                 data.notifyListeners(); },
+                               );
+                             }
                            ),
                          ),
                          const SizedBox(width: 16),
                          Expanded(
-                           child: DropdownButtonFormField<String>(
-                             value: data.entidades[index].tipo,
-                             decoration: const InputDecoration(labelText: "Tipo", border: OutlineInputBorder()),
-                             items: ["CABOCLO", "CABOCLA", "ERÊ MENINO", "ERÊ MENINA", "PRETO VELHO", "PRETA VELHA", "BOIADEIRO", "VAQUEIRO", "BAIANO", "BAIANA", "MALANDRO", "MALANDRA", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM MENINO", "EXÚ - MIRIM MENINA", "FEITICEIRO", "FEITICEIRA", "CIGANO", "CIGANA"]
-                                 .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                             onChanged: (v) { data.entidades[index].tipo = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-                             data.notifyListeners(); },
+                           child: Builder(
+                             builder: (context) {
+                               final options = ["CABOCLO", "CABOCLA", "ERÊ MENINO", "ERÊ MENINA", "PRETO VELHO", "PRETA VELHA", "BOIADEIRO", "VAQUEIRO", "BAIANO", "BAIANA", "MALANDRO", "MALANDRA", "MARINHEIRO", "CAPOEIRA", "POMBOGIRO", "POMBAGIRA", "EXÚ", "EXÚ - MIRIM MENINO", "EXÚ - MIRIM MENINA", "FEITICEIRO", "FEITICEIRA", "CIGANO", "CIGANA"];
+                               final items = options.toSet().toList();
+                               if (data.entidades[index].tipo.isNotEmpty && !items.contains(data.entidades[index].tipo)) {
+                                 items.add(data.entidades[index].tipo);
+                               }
+                               return DropdownButtonFormField<String>(
+                                 value: data.entidades[index].tipo,
+                                 decoration: const InputDecoration(labelText: "Tipo", border: OutlineInputBorder()),
+                                 items: items.map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                                 onChanged: (v) { data.entidades[index].tipo = v!; // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+                                 data.notifyListeners(); },
+                               );
+                             }
                            ),
                          ),
                        ],

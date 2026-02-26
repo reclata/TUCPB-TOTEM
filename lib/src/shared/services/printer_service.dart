@@ -11,6 +11,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:terreiro_queue_system/src/shared/setup/printer_config.dart';
 
 final printerServiceProvider = Provider((ref) => PrinterService());
 
@@ -31,7 +34,7 @@ class PrinterService {
       return;
     }
 
-    final types = [GertecType.sk210, GertecType.gpos700];
+    final types = [GertecType.sk210, GertecType.gpos700, GertecType.network];
     
     for (final type in types) {
       try {
@@ -55,6 +58,18 @@ class PrinterService {
 
           debugPrint('[PRINTER] Enviando BITMAP (${bytes.length} bytes) para o hardware...');
           await printer.instance.printBitmap(bytes);
+        } else if (type == GertecType.network) {
+          debugPrint('[PRINTER] >>> CONFIGURANDO IMPRESSÃO VIA REDE (IP: ${PrinterConfig.defaultIp}) <<<');
+          final bytes = await _generateTicketBitmap(
+            terreiroName: terreiroName,
+            giraName: giraName,
+            entityName: entityName,
+            mediumName: mediumName,
+            mediumInitials: mediumInitials,
+            ticketCode: ticketCode,
+            dateStr: dateStr,
+          );
+          await _printViaNetwork(bytes);
         } else {
           TextPrint txt(String msg, {bool bold = false, TextAlignment align = TextAlignment.left}) =>
               TextPrint(message: msg, bold: bold, alignment: align, fontType: FontType.def);
@@ -119,11 +134,7 @@ class PrinterService {
 
     double currentY = padding;
 
-    // Carregar imagem da Logo
-    final ByteData data = await rootBundle.load('assets/images/logo.png');
-    final ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: 270);
-    final ui.FrameInfo fi = await codec.getNextFrame();
-    final ui.Image logoImg = fi.image;
+    // Retirada carga de imagem da Logo, trocada por texto
 
     void drawText(String text, {double fontSize = 20, bool bold = false, bool center = false}) {
       final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
@@ -141,13 +152,18 @@ class PrinterService {
       currentY += paragraph.height + 15; // Aumentado de 5 para 15 para separar mais as linhas
     }
 
-    // 1. Logo do Terreiro (Ajustada para 270px e centralizada no topo)
-    // Retornado para Offset 0 para evitar cortes reportados na v24
-    canvas.drawImage(logoImg, Offset((width - 270) / 2, 0), paint); 
-    currentY = 280; // Recalibrado para dar um pequeno respiro após a imagem inteira
+    // 1. Cabecalho T.U.C.P.B no lugar da Logo
+    currentY = 40;
+    drawText('T.U.C.P.B.', bold: true, fontSize: 50, center: true);
+    currentY += 20;
 
-    // 2. Título da Gira (GIRA DE [TEMA]) - Letra 50% maior (30)
-    drawText('GIRA DE ${giraName.toUpperCase()}', bold: true, fontSize: 30, center: true);
+    // 2. Título da Gira (Não duplicar 'GIRA DE')
+    final String giraTitleUpper = giraName.toUpperCase().trim();
+    if (giraTitleUpper.startsWith('GIRA DE')) {
+      drawText(giraTitleUpper, bold: true, fontSize: 30, center: true);
+    } else {
+      drawText('GIRA DE $giraTitleUpper', bold: true, fontSize: 30, center: true);
+    }
     
     // 3. Data e Hora
     drawText(dateStr, fontSize: 18, center: true);
@@ -178,6 +194,28 @@ class PrinterService {
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     
     return byteData!.buffer.asUint8List();
+  }
+
+  Future<void> _printViaNetwork(Uint8List bytes) async {
+    final url = Uri.parse('http://${PrinterConfig.defaultIp}:${PrinterConfig.defaultPort}/print');
+    try {
+      debugPrint('[PRINTER] Enviando para $url...');
+      final response = await http.post(
+        url,
+        body: bytes,
+        headers: {'Content-Type': 'application/octet-stream'},
+      ).timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        debugPrint('[PRINTER] Impressão via rede enviada com sucesso!');
+      } else {
+        debugPrint('[PRINTER] Erro na resposta da rede: ${response.statusCode}');
+        throw Exception('Erro de rede: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('[PRINTER] Falha na impressão via rede: $e');
+      rethrow;
+    }
   }
 
   void _mockPrint(String terreiro, String gira, String entity, String medium, String code, DateTime date) {

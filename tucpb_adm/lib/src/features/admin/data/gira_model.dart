@@ -10,10 +10,15 @@ class GiraModel {
   final bool ativo;
   final String? descricao;
   final String tipo; // 'gira', 'culto', 'evento', 'reuniao'
+  final String linha; // Grupo espiritual (ex: ESQUERDA, CABOCLO)
+  final String tema;  // Nome completo (ex: Gira de Pretos Velhos)
   final String? cor; // Cor para visualização no calendário
   final String? mediumId; // Caso seja limpeza
   final String? mediumNome; // Nome do médium escalado
   final bool visivelAssistencia; // Se é visível para o público/assistência
+  final List<String> mediumsParticipantes;
+  final List<String> entidadesParticipantes;
+  final Map<String, bool> presencas;
   // Configurações do Kiosk (Totem)
   final String horarioKiosk;
   final String? horarioEncerramentoKiosk;
@@ -31,6 +36,8 @@ class GiraModel {
     required this.ativo,
     this.descricao,
     required this.tipo,
+    this.linha = '',
+    this.tema = '',
     this.cor,
     this.mediumId,
     this.mediumNome,
@@ -38,6 +45,9 @@ class GiraModel {
     this.horarioKiosk = '18:00',
     this.horarioEncerramentoKiosk,
     this.encerramentoKioskAtivo = false,
+    this.mediumsParticipantes = const [],
+    this.entidadesParticipantes = const [],
+    this.presencas = const {},
     this.historico,
   });
 
@@ -52,6 +62,8 @@ class GiraModel {
       ativo: map['ativo'] ?? true,
       descricao: map['descricao'],
       tipo: map['tipo'] ?? 'gira',
+      linha: map['linha'] ?? '',
+      tema: map['tema'] ?? map['nome'] ?? '',
       cor: map['cor'],
       mediumId: map['mediumId'],
       mediumNome: map['mediumNome'],
@@ -59,6 +71,9 @@ class GiraModel {
       horarioKiosk: map['horarioKiosk'] ?? '18:00',
       horarioEncerramentoKiosk: map['horarioEncerramentoKiosk'],
       encerramentoKioskAtivo: map['encerramentoKioskAtivo'] ?? false,
+      mediumsParticipantes: List<String>.from(map['mediumsParticipantes'] ?? map['mediums_participantes'] ?? []),
+      entidadesParticipantes: List<String>.from(map['entidadesParticipantes'] ?? map['entidades_participantes'] ?? []),
+      presencas: Map<String, bool>.from(map['presencas'] ?? map['presences'] ?? {}),
       historico: map['historico'] != null
           ? HistoricoGira.fromMap(map['historico'] as Map<String, dynamic>)
           : null,
@@ -73,6 +88,8 @@ class GiraModel {
         'ativo': ativo,
         'descricao': descricao,
         'tipo': tipo,
+        'linha': linha,
+        'tema': tema,
         'cor': cor ?? defaultCor(tipo),
         'mediumId': mediumId,
         'mediumNome': mediumNome,
@@ -80,6 +97,9 @@ class GiraModel {
         'horarioKiosk': horarioKiosk,
         'horarioEncerramentoKiosk': horarioEncerramentoKiosk,
         'encerramentoKioskAtivo': encerramentoKioskAtivo,
+        'mediumsParticipantes': mediumsParticipantes,
+        'entidadesParticipantes': entidadesParticipantes,
+        'presencas': presencas,
         'dataCriacao': FieldValue.serverTimestamp(),
         // 'historico' é preenchido pelo TOTEM
       };

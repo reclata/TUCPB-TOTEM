@@ -15,6 +15,7 @@ import 'package:terreiro_queue_system/src/features/kiosk/presentation/kiosk_scre
 import 'package:terreiro_queue_system/src/features/admin/presentation/admin_screen.dart';
 import 'package:terreiro_queue_system/src/features/tv/presentation/tv_screen.dart';
 import 'package:terreiro_queue_system/src/features/queue/presentation/queue_web_screen.dart';
+import 'package:terreiro_queue_system/src/shared/services/printer_service.dart';
 import 'package:terreiro_queue_system/firebase_options.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
@@ -97,6 +98,7 @@ final _router = GoRouter(
     GoRoute(
       path: '/admin',
       pageBuilder: (context, state) {
+        debugPrint('[ROUTER] Navegando para Admin Tablet (Web Mode: $kIsWeb)');
         _setTitle('TUCPB_TABLET');
         return NoTransitionPage(child: const AdminScreen());
       },

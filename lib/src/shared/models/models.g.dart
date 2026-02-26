@@ -19,12 +19,19 @@ Gira _$GiraFromJson(Map<String, dynamic> json) => Gira(
   horarioEncerramentoKiosk: json['horarioEncerramentoKiosk'] as String?,
   encerramentoKioskAtivo: json['encerramentoKioskAtivo'] as bool? ?? false,
   mediumsParticipantes:
-      (json['mediumsParticipantes'] as List<dynamic>?)
+      (Gira._readMediumsParticipantes(json, 'mediumsParticipantes')
+              as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  entidadesParticipantes:
+      (Gira._readEntidadesParticipantes(json, 'entidadesParticipantes')
+              as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const [],
   presencas:
-      (json['presencas'] as Map<String, dynamic>?)?.map(
+      (Gira._readPresencas(json, 'presencas') as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as bool),
       ) ??
       const {},
@@ -43,6 +50,7 @@ Map<String, dynamic> _$GiraToJson(Gira instance) => <String, dynamic>{
   'horarioEncerramentoKiosk': instance.horarioEncerramentoKiosk,
   'encerramentoKioskAtivo': instance.encerramentoKioskAtivo,
   'mediumsParticipantes': instance.mediumsParticipantes,
+  'entidadesParticipantes': instance.entidadesParticipantes,
   'presencas': instance.presencas,
 };
 
@@ -108,7 +116,7 @@ Map<String, dynamic> _$MediumToJson(Medium instance) => <String, dynamic>{
   'terreiroId': instance.terreiroId,
   'nome': instance.nome,
   'ativo': instance.ativo,
-  'entidades': instance.entidades,
+  'entidades': instance.entidades.map((e) => e.toJson()).toList(),
   'girasParticipadas': instance.girasParticipadas,
   'atendimentosRealizados': instance.atendimentosRealizados,
   'faltas': instance.faltas,

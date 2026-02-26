@@ -87,17 +87,27 @@ class AbaPessoalTab extends StatelessWidget {
           TextFormField(controller: data.complementoController, decoration: const InputDecoration(labelText: "Complemento", border: OutlineInputBorder())),
           const SizedBox(height: 16),
 
-          // Estado Civil
-          DropdownButtonFormField<String>(
-            value: data.estadoCivil,
-            decoration: const InputDecoration(labelText: "Estado Civil", border: OutlineInputBorder()),
-            items: ["Solteiro", "Solteira", "Casado", "Casada", "Namorando", "Viuvo", "Viuva"]
-                .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-            onChanged: (v) {
-                data.estadoCivil = v!;
-                // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-                data.notifyListeners();
-            },
+          // Estado Civil com lógica de segurança para evitar Assertion Error
+          Builder(
+            builder: (context) {
+              final options = ["Solteiro", "Solteira", "Casado", "Casada", "Namorando", "Viuvo", "Viuva", "Divorciado", "Divorciada", "Separado", "Separada", "União Estável", "Outros"];
+              // Se o valor do banco não estiver na lista (ex: legado ou erro), adicionamos temporariamente para não quebrar a tela
+              final items = options.toSet().toList();
+              if (data.estadoCivil.isNotEmpty && !items.contains(data.estadoCivil)) {
+                items.add(data.estadoCivil);
+              }
+
+              return DropdownButtonFormField<String>(
+                value: data.estadoCivil,
+                decoration: const InputDecoration(labelText: "Estado Civil", border: OutlineInputBorder()),
+                items: items.map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (v) {
+                    data.estadoCivil = v!;
+                    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+                    data.notifyListeners();
+                },
+              );
+            }
           ),
           const SizedBox(height: 16),
 

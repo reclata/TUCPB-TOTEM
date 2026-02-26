@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
 
 final adminRepositoryProvider = Provider((ref) => AdminRepository(FirebaseFirestore.instance));
 
@@ -13,32 +14,34 @@ class AdminRepository {
 
   // --- Gira Management ---
   Future<void> createGira(Gira gira) async {
-    // Buscar médiuns para pré-popular presenças
-    final mediumsSnap = await _firestore.collection('usuarios')
-        .where('ativo', isEqualTo: true)
-        .get();
+    final Map<String, bool> finalPresencas = Map.from(gira.presencas);
 
-    final Map<String, bool> initialPresencas = {};
-    
-    // Grupos de linhagem (replicando a lógica do totem)
-    final Map<String, List<String>> lineGroups = {
-      'Boiadeiro': ['Boiadeiro', 'Marinheiro', 'Malandro'],
-      'Esquerda': ['Esquerda'],
-    };
-    final allowedLines = lineGroups[gira.linha] ?? [gira.linha];
+    // Se não houver presenças pré-selecionadas (ex: via UI), tenta preencher automaticamente
+    if (finalPresencas.isEmpty) {
+      final mediumsSnap = await _firestore.collection('usuarios')
+          .where('ativo', isEqualTo: true)
+          .get();
 
-    for (var doc in mediumsSnap.docs) {
-      final data = doc.data();
-      final entidades = (data['entidades'] as List?) ?? [];
-      final hasCompatibleEntity = entidades.any((e) => allowedLines.contains(e['linha']));
-      
-      if (hasCompatibleEntity) {
-        initialPresencas[doc.id] = true;
+      final allowedLinesNorm = (LINE_GROUPS[normalizeSpiritualLine(gira.linha)] ?? [normalizeSpiritualLine(gira.linha)])
+          .map((l) => normalizeSpiritualLine(l)).toList();
+
+      for (var doc in mediumsSnap.docs) {
+        final data = doc.data();
+        final entidades = (data['entidades'] as List?) ?? [];
+        final hasCompatibleEntity = entidades.any((e) {
+          final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
+          final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
+          return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
+        });
+        
+        if (hasCompatibleEntity) {
+          finalPresencas[doc.id] = true;
+        }
       }
     }
 
     final giraData = gira.toJson();
-    giraData['presencas'] = initialPresencas;
+    giraData['presencas'] = finalPresencas;
     
     await _firestore.collection('giras').doc(gira.id).set(giraData);
   }
@@ -85,10 +88,12 @@ class AdminRepository {
               data['horarioKiosk'] ??= '';
               // Compatibilidade: 'encerramentoKioskAtivo' pode não existir
               data['encerramentoKioskAtivo'] ??= false;
-              // Compatibilidade: 'mediumsParticipantes' pode não existir
-              data['mediumsParticipantes'] ??= [];
-              // Compatibilidade: 'presencas' pode não existir
-              data['presencas'] ??= {};
+              // Compatibilidade: 'mediumsParticipantes' e 'entidadesParticipantes' (suporte a camelCase e snake_case)
+              data['mediumsParticipantes'] ??= data['mediums_participantes'] ?? [];
+              data['entidadesParticipantes'] ??= data['entidades_participantes'] ?? [];
+              
+              // Compatibilidade: 'presencas'
+              data['presencas'] ??= data['presences'] ?? {};
               // Compatibilidade: 'status' pode não existir (tucpb_adm usa 'ativo')
               if (!data.containsKey('status') || data['status'] == null) {
                 data['status'] = (data['ativo'] == true) ? 'aberta' : 'agendada';
@@ -119,19 +124,35 @@ class AdminRepository {
   Stream<List<Entidade>> streamEntities(String terreiroId) {
     return _firestore
         .collection('entidades')
-        // Removido filtro de terreiroId
         .snapshots()
-        .map((snap) => snap.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return Entidade.fromJson(data);
-        }).toList());
+        .map((snap) {
+          final List<Entidade> result = [];
+          for (final doc in snap.docs) {
+            try {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+              
+              // Robustness for missing fields
+              data['terreiroId'] ??= '';
+              data['nome'] ??= '';
+              data['linha'] ??= '';
+              data['tipo'] ??= '';
+              
+              result.add(Entidade.fromJson(data));
+            } catch (e) {
+              debugPrint('[KIOSK_DEBUG] Erro ao parsear Entidade ${doc.id}: $e');
+            }
+          }
+          return result;
+        });
     }
 
   // --- Medium Management ---
   Future<void> addMedium(Medium medium) async {
     // Save the medium
-    await _firestore.collection('usuarios').doc(medium.id).set(medium.toJson());
+    final data = medium.toJson();
+    data['entidades'] = medium.entidades.map((e) => e.toJson()).toList();
+    await _firestore.collection('usuarios').doc(medium.id).set(data);
     
     // Auto-create entities that don't exist yet
     for (var medEnt in medium.entidades) {
@@ -150,7 +171,9 @@ class AdminRepository {
 
   Future<void> updateMedium(Medium medium) async {
     // Update the medium
-    await _firestore.collection('usuarios').doc(medium.id).update(medium.toJson());
+    final data = medium.toJson();
+    data['entidades'] = medium.entidades.map((e) => e.toJson()).toList();
+    await _firestore.collection('usuarios').doc(medium.id).update(data);
     
     // Auto-create new entities
     for (var medEnt in medium.entidades) {
@@ -238,26 +261,67 @@ class AdminRepository {
   Stream<List<Usuario>> streamUsuarios(String terreiroId) {
     return _firestore
         .collection('usuarios')
-        .where('terreiroId', isEqualTo: terreiroId)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return Usuario.fromJson(data);
-        }).toList());
+        .map((snap) {
+          final List<Usuario> result = [];
+          for (final doc in snap.docs) {
+            try {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+              
+              // Map tucpb_adm fields to Usuario model
+              data['nomeCompleto'] = (data['nomeCompleto'] ?? data['nome'] ?? 'Sem nome').toString();
+              data['login'] = (data['login'] ?? data['email'] ?? '').toString();
+              data['perfilAcesso'] = (data['perfilAcesso'] ?? data['perfil'] ?? 'medium').toString().toLowerCase();
+              data['terreiroId'] = (data['terreiroId'] ?? terreiroId).toString();
+              data['senha'] = (data['senha'] ?? data['senhaInicial'] ?? '').toString();
+              data['permissoes'] = List<String>.from(data['permissoes'] ?? []);
+              data['ativo'] = data['ativo'] ?? true;
+
+              result.add(Usuario.fromJson(data));
+            } catch (e) {
+              debugPrint('[KIOSK_DEBUG] Erro ao parsear Usuario ${doc.id}: $e');
+            }
+          }
+          return result;
+        });
   }
 
   // --- Ticket Management ---
   Stream<List<Ticket>> streamTickets(String terreiroId) {
     return _firestore
         .collection('tickets')
-        // Removido filtro de terreiroId
         .snapshots()
-        .map((snap) => snap.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return Ticket.fromJson(data);
-        }).toList());
+        .map((snap) {
+          final List<Ticket> result = [];
+          for (final doc in snap.docs) {
+            try {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+              
+              // Robustness for missing fields
+              data['terreiroId'] ??= '';
+              data['giraId'] ??= '';
+              data['entidadeId'] ??= '';
+              data['mediumId'] ??= '';
+              data['codigoSenha'] ??= '';
+              data['sequencial'] ??= 0;
+              data['dataRef'] ??= '';
+              data['status'] ??= 'emitida';
+              data['ordemFila'] ??= 0;
+              data['chamadaCount'] ??= 0;
+              data['isRedistributed'] ??= false;
+              
+              // Handle dataHoraEmissao if missing (shouldn't happen but let's be safe)
+              data['dataHoraEmissao'] ??= Timestamp.now();
+              
+              result.add(Ticket.fromJson(data));
+            } catch (e) {
+              debugPrint('[KIOSK_DEBUG] Erro ao parsear Ticket ${doc.id}: $e');
+            }
+          }
+          return result;
+        });
     }
 
   // --- Seed Data for Testing ---

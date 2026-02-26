@@ -118,16 +118,24 @@ class AbaEspiritual extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<String>(
-                value: item.tipo,
-                items: ["Macifi", "Buri", "Obrigação", "Firmeza", "Feitura", "Jubileu"]
-                  .map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (v) {
-                  item.tipo = v!; 
-                  // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-                  data.notifyListeners(); 
-                },
-                decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8)),
+              child: Builder(
+                builder: (context) {
+                  final options = ["Macifi", "Buri", "Obrigação", "Firmeza", "Feitura", "Jubileu"];
+                  final items = options.toSet().toList();
+                  if (item.tipo.isNotEmpty && !items.contains(item.tipo)) {
+                    items.add(item.tipo);
+                  }
+                  return DropdownButtonFormField<String>(
+                    value: item.tipo,
+                    items: items.map<DropdownMenuItem<String>>((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (v) {
+                      item.tipo = v!; 
+                      // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+                      data.notifyListeners(); 
+                    },
+                    decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8)),
+                  );
+                }
               ),
             ),
             const SizedBox(width: 8),
