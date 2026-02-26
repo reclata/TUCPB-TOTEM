@@ -133,7 +133,16 @@ class Medium {
   final String? terreiroId;
   final String nome;
   final bool ativo; // General status of the medium
+  @JsonKey(readValue: _readMediumEntidades)
   final List<MediumEntidade> entidades; // List of entities they channel
+
+  static Object? _readMediumEntidades(Map json, String key) {
+    final raw = json['entidades'] ?? [];
+    if (raw is List) {
+      return raw.map((e) => Map<String, dynamic>.from(e is Map ? e : {})).toList();
+    }
+    return <dynamic>[];
+  }
   
   // Stats
   final int girasParticipadas;

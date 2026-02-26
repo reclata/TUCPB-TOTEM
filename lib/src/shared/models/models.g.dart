@@ -94,8 +94,7 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
   terreiroId: json['terreiroId'] as String?,
   nome: json['nome'] as String? ?? '',
   ativo: json['ativo'] as bool? ?? true,
-  entidades:
-      (json['entidades'] as List<dynamic>?)
+  entidades: (Medium._readMediumEntidades(json, 'entidades') as List<dynamic>?)
           ?.map((e) => MediumEntidade.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
