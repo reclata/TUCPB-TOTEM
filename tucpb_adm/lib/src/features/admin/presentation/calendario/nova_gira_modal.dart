@@ -93,7 +93,9 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
         
         final allowedLinesNorm = _selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
         for (var doc in allMediumsDocs) {
-          final data = doc.data() as Map<String, dynamic>;
+          final rawData = doc.data();
+          if (rawData == null) continue;
+          final data = Map<String, dynamic>.from(rawData as Map);
           if (data['ativo'] == false) continue;
           
           final entidades = List<Map<String, dynamic>>.from(data['entidades'] ?? []);
@@ -268,7 +270,9 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 final docs = snapshot.data!.docs;
                 final allMediums = docs.where((d) {
-                  final data = d.data() as Map<String, dynamic>;
+                  final rawData = d.data();
+                  if (rawData == null) return false;
+                  final data = Map<String, dynamic>.from(rawData as Map);
                   if (data['ativo'] == false) return false;
                   
                   final perfil = (data['perfil'] ?? '').toString().toLowerCase();

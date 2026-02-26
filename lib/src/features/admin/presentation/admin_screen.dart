@@ -1885,8 +1885,9 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
 
               for (var m in allMediums.where((m) => m.ativo)) {
                 final compatibleEntities = m.entidades.where((e) {
-                  final entLinha = normalizeSpiritualLine(e.linha);
-                  final entTipo = normalizeSpiritualLine(e.tipo);
+                  if (e == null) return false;
+                  final entLinha = normalizeSpiritualLine(e.linha ?? '');
+                  final entTipo = normalizeSpiritualLine(e.tipo ?? '');
                   return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
                 }).toList();
                 
@@ -1920,13 +1921,15 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             // Ordenar: primeiro os que têm entidade para as linhas selecionadas
             activeMediums.sort((a, b) {
               final aHasCompatible = a.entidades.any((e) {
-                final entLinha = normalizeSpiritualLine(e.linha);
-                final entTipo = normalizeSpiritualLine(e.tipo);
+                if (e == null) return false;
+                final entLinha = normalizeSpiritualLine(e.linha ?? '');
+                final entTipo = normalizeSpiritualLine(e.tipo ?? '');
                 return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
               });
               final bHasCompatible = b.entidades.any((e) {
-                final entLinha = normalizeSpiritualLine(e.linha);
-                final entTipo = normalizeSpiritualLine(e.tipo);
+                if (e == null) return false;
+                final entLinha = normalizeSpiritualLine(e.linha ?? '');
+                final entTipo = normalizeSpiritualLine(e.tipo ?? '');
                 return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
               });
               
@@ -2295,8 +2298,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
           final allMediums = mediumsAsync.value ?? [];
 
           if (!initialized && mediumsAsync.hasValue) {
-             // Opcional: pre-selecionar algo se quiser, mas aqui é novo então inicia vazio
-             initialized = true;
+            initialized = true;
           
             // Inicializar entidades selecionadas
             for (var entId in (gira.entidadesParticipantes ?? [])) {
@@ -2306,15 +2308,19 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             for (var m in allMediums.where((m) => m.ativo)) {
               mediumsSelected[m.id] = (gira.mediumsParticipantes ?? []).contains(m.id);
             }
+            
+            final String currentGiraTema = gira.tema ?? '';
+            final String currentGiraLinha = gira.linha ?? '';
+
             // Tentar encontrar o tema
             for (var themeKey in GIRA_THEME_MAPPING.keys) {
-              if (gira.tema.contains(themeKey) || gira.tema == themeKey) {
+              if (currentGiraTema.contains(themeKey) || currentGiraTema == themeKey) {
                 selectedTheme = themeKey;
                 break;
               }
             }
-            if (selectedTheme == null && gira.linha.isNotEmpty) {
-               final l = normalizeSpiritualLine(gira.linha);
+            if (selectedTheme == null && currentGiraLinha.isNotEmpty) {
+               final l = normalizeSpiritualLine(currentGiraLinha);
                if (l == normalizeSpiritualLine('ESQUERDA')) selectedTheme = 'Gira de Esquerda';
                else if (l == normalizeSpiritualLine('CABOCLO')) selectedTheme = 'Gira de Caboclo';
                else if (l == normalizeSpiritualLine('BOIADEIRO')) selectedTheme = 'Gira de Boiadeiro';
@@ -2328,11 +2334,11 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             for (var m in allMediums) {
               for (var ent in (m.entidades ?? [])) {
                 if (entitiesSelected[ent.entidadeId] == true) {
-                  inferredLinhasSet.add(ent.linha);
+                  inferredLinhasSet.add(ent.linha ?? '');
                 }
               }
             }
-            selectedLinhas = inferredLinhasSet.toList();
+            selectedLinhas = inferredLinhasSet.where((l) => l.isNotEmpty).toList();
             if (selectedLinhas.isEmpty && selectedTheme != null) {
               selectedLinhas = List.from(GIRA_THEME_MAPPING[selectedTheme] ?? []);
             }
@@ -2353,8 +2359,9 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                 final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
                 for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
                   final compatibleEntities = m.entidades.where((e) {
-                    final entLinha = normalizeSpiritualLine(e.linha);
-                    final entTipo = normalizeSpiritualLine(e.tipo);
+                    if (e == null) return false;
+                    final entLinha = normalizeSpiritualLine(e.linha ?? '');
+                    final entTipo = normalizeSpiritualLine(e.tipo ?? '');
                     return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
                   }).toList();
                   

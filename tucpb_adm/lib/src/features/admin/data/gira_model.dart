@@ -52,10 +52,12 @@ class GiraModel {
   });
 
   factory GiraModel.fromFirestore(DocumentSnapshot doc) {
-    final map = doc.data() as Map<String, dynamic>;
+    final rawData = doc.data();
+    if (rawData == null) throw Exception("Documento ${doc.id} sem dados");
+    final map = Map<String, dynamic>.from(rawData as Map);
     return GiraModel(
       id: doc.id,
-      nome: map['nome'] ?? '',
+      nome: (map['nome'] ?? '').toString(),
       data: (map['data'] as Timestamp).toDate(),
       horarioInicio: map['horarioInicio'] ?? '',
       horarioFim: map['horarioFim'] ?? '',

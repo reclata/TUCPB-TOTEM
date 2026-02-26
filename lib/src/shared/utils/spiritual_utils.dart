@@ -35,7 +35,8 @@ const List<String> ALLOWED_TABLET_USERS = [
   'LUCIANO',
 ];
 
-String normalizeSpiritualLine(String s) {
+String normalizeSpiritualLine(String? s) {
+  if (s == null || s.trim().isEmpty) return '';
   final u = s.toUpperCase().trim();
   if (u == 'EXU' || u == 'EXÚ') return 'EXÚ';
   if (u == 'POMBAGIRA' || u == 'POMBA GIRA') return 'POMBA GIRA';

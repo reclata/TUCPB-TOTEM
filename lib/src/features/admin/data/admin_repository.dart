@@ -76,24 +76,30 @@ class AdminRepository {
           final List<Gira> result = [];
           for (final doc in snap.docs) {
             try {
-              final data = Map<String, dynamic>.from(doc.data());
+              final rawData = doc.data();
+              if (rawData == null) continue;
+              final data = Map<String, dynamic>.from(rawData);
+              
               data['id'] = doc.id;
               // Compatibilidade: campo 'nome' do tucpb_adm -> 'tema' do Totem
-              data['tema'] ??= data['nome'] ?? '';
+              data['tema'] = (data['tema'] ?? data['nome'] ?? '').toString();
               // Compatibilidade: 'linha' pode não existir no tucpb_adm
-              data['linha'] ??= '';
+              data['linha'] = (data['linha'] ?? '').toString();
               // Compatibilidade: 'horarioInicio' pode vir como vazio
-              data['horarioInicio'] ??= data['horarioFim'] ?? '';
+              data['horarioInicio'] = (data['horarioInicio'] ?? data['horarioFim'] ?? '').toString();
               // Compatibilidade: 'horarioKiosk' pode não existir
-              data['horarioKiosk'] ??= '';
+              data['horarioKiosk'] = (data['horarioKiosk'] ?? '').toString();
               // Compatibilidade: 'encerramentoKioskAtivo' pode não existir
-              data['encerramentoKioskAtivo'] ??= false;
-              // Compatibilidade: 'mediumsParticipantes' e 'entidadesParticipantes' (suporte a camelCase e snake_case)
-              data['mediumsParticipantes'] ??= data['mediums_participantes'] ?? [];
-              data['entidadesParticipantes'] ??= data['entidades_participantes'] ?? [];
+              data['encerramentoKioskAtivo'] = data['encerramentoKioskAtivo'] ?? false;
               
-              // Compatibilidade: 'presencas'
-              data['presencas'] ??= data['presences'] ?? {};
+              // Explicit type conversion for Lists
+              data['mediumsParticipantes'] = List<String>.from(data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? []);
+              data['entidadesParticipantes'] = List<String>.from(data['entidadesParticipantes'] ?? data['entidades_participantes'] ?? []);
+              
+              // Explicit type conversion for Map
+              final rawPresencas = data['presencas'] ?? data['presences'] ?? {};
+              data['presencas'] = Map<String, bool>.from(rawPresencas is Map ? rawPresencas : {});
+              
               // Compatibilidade: 'status' pode não existir (tucpb_adm usa 'ativo')
               if (!data.containsKey('status') || data['status'] == null) {
                 data['status'] = (data['ativo'] == true) ? 'aberta' : 'agendada';
@@ -129,14 +135,16 @@ class AdminRepository {
           final List<Entidade> result = [];
           for (final doc in snap.docs) {
             try {
-              final data = Map<String, dynamic>.from(doc.data());
+              final rawData = doc.data();
+              if (rawData == null) continue;
+              final data = Map<String, dynamic>.from(rawData as Map);
               data['id'] = doc.id;
               
               // Robustness for missing fields
-              data['terreiroId'] ??= '';
-              data['nome'] ??= '';
-              data['linha'] ??= '';
-              data['tipo'] ??= '';
+              data['terreiroId'] = (data['terreiroId'] ?? '').toString();
+              data['nome'] = (data['nome'] ?? '').toString();
+              data['linha'] = (data['linha'] ?? '').toString();
+              data['tipo'] = (data['tipo'] ?? '').toString();
               
               result.add(Entidade.fromJson(data));
             } catch (e) {
@@ -202,34 +210,38 @@ class AdminRepository {
           final List<Medium> result = [];
           for (final doc in snap.docs) {
             try {
-              final data = Map<String, dynamic>.from(doc.data());
+              final rawData = doc.data();
+              if (rawData == null) continue;
+              final data = Map<String, dynamic>.from(rawData);
+              
               data['id'] = doc.id;
               // Compatibilidade: campo 'nome' pode não existir
-              data['nome'] ??= data['nomeCompleto'] ?? '';
+              data['nome'] = (data['nome'] ?? data['nomeCompleto'] ?? '').toString();
               // Compatibilidade: campo 'ativo' pode não existir (padrão: true)
-              data['ativo'] ??= true;
+              data['ativo'] = data['ativo'] ?? true;
               // Compatibilidade: 'cargo' pode não existir
-              data['cargo'] ??= '';
+              data['cargo'] = (data['cargo'] ?? '').toString();
               // Compatibilidade: 'fotoUrl' pode não existir
-              data['fotoUrl'] ??= '';
+              data['fotoUrl'] = (data['fotoUrl'] ?? '').toString();
               // Compatibilidade: 'ultimaGira' pode não existir
-              data['ultimaGira'] ??= '';
+              data['ultimaGira'] = (data['ultimaGira'] ?? '').toString();
+              
               // Compatibilidade: 'entidades' pode não existir
-              data['entidades'] ??= [];
-              // Pré-processar entidades para garantir campos corretos
-              if (data['entidades'] is List) {
-                final ents = (data['entidades'] as List).map((e) {
-                  final ent = Map<String, dynamic>.from(e as Map? ?? {});
+              final rawEntidades = data['entidades'] ?? [];
+              if (rawEntidades is List) {
+                data['entidades'] = rawEntidades.map((e) {
+                  final ent = Map<String, dynamic>.from(e is Map ? e : {});
                   // 'entidadeId' pode não existir no tucpb_adm
-                  ent['entidadeId'] ??= ent['id'] ?? '';
+                  ent['entidadeId'] = (ent['entidadeId'] ?? ent['id'] ?? '').toString();
                   // 'status' pode não existir — padrão: 'ativo'
-                  ent['status'] ??= 'ativo';
-                  // 'linha' pode estar em uppercase no tucpb_adm
-                  ent['linha'] ??= '';
-                  ent['tipo'] ??= '';
+                  ent['status'] = (ent['status'] ?? 'ativo').toString();
+                  ent['linha'] = (ent['linha'] ?? '').toString();
+                  ent['tipo'] = (ent['tipo'] ?? '').toString();
+                  ent['nome'] = (ent['nome'] ?? ent['entidadeNome'] ?? '').toString();
                   return ent;
                 }).toList();
-                data['entidades'] = ents;
+              } else {
+                data['entidades'] = [];
               }
               result.add(Medium.fromJson(data));
             } catch (e) {
@@ -266,7 +278,9 @@ class AdminRepository {
           final List<Usuario> result = [];
           for (final doc in snap.docs) {
             try {
-              final data = Map<String, dynamic>.from(doc.data());
+              final rawData = doc.data();
+              if (rawData == null) continue;
+              final data = Map<String, dynamic>.from(rawData as Map);
               data['id'] = doc.id;
               
               // Map tucpb_adm fields to Usuario model
