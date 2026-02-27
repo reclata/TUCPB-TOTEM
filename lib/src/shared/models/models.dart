@@ -64,9 +64,9 @@ class Gira {
     this.horarioKiosk = '',
     this.horarioEncerramentoKiosk,
     this.encerramentoKioskAtivo = false,
-    this.mediumsParticipantes = const [],
-    this.entidadesParticipantes = const [],
-    this.presencas = const {},
+    this.mediumsParticipantes = const <String>[],
+    this.entidadesParticipantes = const <String>[],
+    this.presencas = const <String, bool>{},
   });
 
   // Getter de compatibilidade: se status não estiver setado ou for vazio, tenta usar o 'ativo'

@@ -23,18 +23,18 @@ Gira _$GiraFromJson(Map<String, dynamic> json) => Gira(
               as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
-      const [],
+      const <String>[],
   entidadesParticipantes:
       (Gira._readEntidadesParticipantes(json, 'entidadesParticipantes')
               as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
-      const [],
+      const <String>[],
   presencas:
       (Gira._readPresencas(json, 'presencas') as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as bool),
       ) ??
-      const {},
+      const <String, bool>{},
 );
 
 Map<String, dynamic> _$GiraToJson(Gira instance) => <String, dynamic>{
@@ -94,7 +94,8 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
   terreiroId: json['terreiroId'] as String?,
   nome: json['nome'] as String? ?? '',
   ativo: json['ativo'] as bool? ?? true,
-  entidades: (Medium._readMediumEntidades(json, 'entidades') as List<dynamic>?)
+  entidades:
+      (Medium._readMediumEntidades(json, 'entidades') as List<dynamic>?)
           ?.map((e) => MediumEntidade.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
