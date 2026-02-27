@@ -98,10 +98,12 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
           final data = Map<String, dynamic>.from(rawData as Map);
           if (data['ativo'] == false) continue;
           
-          final entidades = List<Map<String, dynamic>>.from(data['entidades'] ?? []);
+          final rawEnt = data['entidades'];
+          final entidades = rawEnt is List ? List<dynamic>.from(rawEnt) : [];
           final compatibleEntities = entidades.where((e) {
-            final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
-            final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
+            if (e is! Map) return false;
+            final entLinha = normalizeSpiritualLine(e['linha']?.toString() ?? '');
+            final entTipo = normalizeSpiritualLine(e['tipo']?.toString() ?? '');
             return allowedLinesNorm.contains(entLinha) || allowedLinesNorm.contains(entTipo);
           }).toList();
           
@@ -280,7 +282,7 @@ class _NovaGiraModalState extends ConsumerState<NovaGiraModal> {
                   if (!allowedProfiles.contains(perfil)) return false;
 
                   final entidades = data['entidades'];
-                  if (entidades == null || (entidades as List).isEmpty) return false;
+                  if (entidades is! List || entidades.isEmpty) return false;
 
                   return true;
                 }).toList();

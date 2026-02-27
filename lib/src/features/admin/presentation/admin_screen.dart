@@ -1290,7 +1290,7 @@ class _CalendarWidgetState extends ConsumerState<_CalendarWidget> {
 
   void _showPresenceDialog(BuildContext context, WidgetRef ref, Gira gira) {
     final mediumsAsync = ref.read(mediumListProvider('demo-terreiro'));
-    Map<String, bool> currentPresencas = Map.from(gira.presencas);
+        Map<String, bool> currentPresencas = Map<String, bool>.from(gira.presencas);
 
     showDialog(
       context: context,
@@ -1875,7 +1875,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               selectedTheme = theme;
               if (theme != null) {
               temaCtrl.text = theme;
-              selectedLinhas = List.from(GIRA_THEME_MAPPING[theme] ?? []);
+              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? []);
               
               // Pré-selecionar médiuns e entidades daquelas linhas
               mediumsSelected.clear();
@@ -2335,6 +2335,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             // Inferir linhas
             final Set<String> inferredLinhasSet = {};
             for (var m in allMediums) {
+              if (m == null || !m.ativo) continue;
               for (var ent in (m.entidades ?? [])) {
                 if (entitiesSelected[ent.entidadeId] == true) {
                   inferredLinhasSet.add(ent.linha ?? '');
@@ -2343,7 +2344,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             }
             selectedLinhas = inferredLinhasSet.where((l) => l.isNotEmpty).toList();
             if (selectedLinhas.isEmpty && selectedTheme != null) {
-              selectedLinhas = List.from(GIRA_THEME_MAPPING[selectedTheme] ?? []);
+              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[selectedTheme] ?? []);
             }
             initialized = true;
           }
@@ -2352,7 +2353,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               selectedTheme = theme;
               if (theme != null) {
                 temaCtrl.text = theme;
-                selectedLinhas = List.from(GIRA_THEME_MAPPING[theme] ?? []);
+                selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? []);
                 
                 // Opcional: Limpar e reaplicar seleção sugerida ao trocar o tema em uma edição?
                 // Melhor limpar para evitar salvar entidades de linhas diferentes por engano.
@@ -3357,7 +3358,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
     final nameCtrl = TextEditingController(text: medium.nome);
     final maxFichasCtrl = TextEditingController(text: medium.maxFichas.toString());
     final allEntities = ref.read(entityListProvider(terreiroId)).value ?? [];
-    final List<MediumEntidade> selectedEntities = List.from(medium.entidades);
+    final List<MediumEntidade> selectedEntities = List<MediumEntidade>.from(medium.entidades);
 
     showDialog(
       context: context,
