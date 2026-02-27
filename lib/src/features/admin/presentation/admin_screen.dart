@@ -1681,7 +1681,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     final girasByDate = <String, List<Gira>>{};
     for (var gira in giras) {
       final key = '${gira.data.year}-${gira.data.month}-${gira.data.day}';
-      girasByDate.putIfAbsent(key, () => []).add(gira);
+      girasByDate.putIfAbsent(key, () => <Gira>[]).add(gira);
     }
 
     final today = DateTime.now();
@@ -1843,8 +1843,8 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     String? selectedLinha;
     DateTime selectedDate = date;
     bool encerramentoAtivo = false;
-    Map<String, bool> mediumsSelected = {};
-    Map<String, bool> entitiesSelected = {};
+    Map<String, bool> mediumsSelected = <String, bool>{};
+    Map<String, bool> entitiesSelected = <String, bool>{};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
     final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
@@ -1856,7 +1856,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     
     bool initialized = false;
     String? selectedTheme;
-    List<String> selectedLinhas = [];
+    List<String> selectedLinhas = <String>[];
 
     showDialog(
       context: context,
@@ -1990,7 +1990,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         prefixIcon: const Icon(Icons.subject),
                       ),
                       value: selectedTheme,
-                      items: GIRA_THEME_MAPPING.keys.map((t) => DropdownMenuItem(
+                      items: GIRA_THEME_MAPPING.keys.map<DropdownMenuItem<String>>((t) => DropdownMenuItem<String>(
                         value: t,
                         child: Text(t),
                       )).toList(),
@@ -2013,7 +2013,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 4,
-                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? []).map((linha) {
+                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? <String>[]).map<Widget>((linha) {
                             final isChecked = selectedLinhas.contains(linha);
                             return FilterChip(
                               label: Text(linha, style: TextStyle(fontSize: 12, color: isChecked ? Colors.white : Colors.brown[800])),
@@ -2118,7 +2118,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
-                          children: activeMediums.map((m) {
+                          children: activeMediums.map<Widget>((m) {
                             final isSelected = mediumsSelected[m.id] ?? false;
                             final listEntidades = m.entidades ?? <MediumEntidade>[];
                             
@@ -2165,7 +2165,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                                     Padding(
                                       padding: const EdgeInsets.only(left: 32, bottom: 8),
                                       child: Column(
-                                        children: filteredEntidades.map((ent) {
+                                        children: filteredEntidades.map<Widget>((ent) {
                                           return CheckboxListTile(
                                             dense: true,
                                             title: Text(ent.entidadeNome, style: const TextStyle(fontSize: 13)),
@@ -2285,9 +2285,9 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     DateTime selectedDate = gira.data ?? DateTime.now();
     bool encerramentoAtivo = gira.encerramentoKioskAtivo == true;
     bool initialized = false;
-    Map<String, bool> mediumsSelected = {};
-    Map<String, bool> entitiesSelected = {};
-    List<String> selectedLinhas = [];
+    Map<String, bool> mediumsSelected = <String, bool>{};
+    Map<String, bool> entitiesSelected = <String, bool>{};
+    List<String> selectedLinhas = <String>[];
     String? selectedTheme;
 
     showDialog(
@@ -2334,7 +2334,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                else if (l == normalizeSpiritualLine('CIGANO')) selectedTheme = 'Gira de Cigano';
             }
             // Inferir linhas
-            final Set<String> inferredLinhasSet = {};
+            final Set<String> inferredLinhasSet = <String>{};
             for (var m in allMediums) {
               if (m == null || !m.ativo) continue;
               for (var ent in (m.entidades ?? [])) {
@@ -2496,7 +2496,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         prefixIcon: const Icon(Icons.flag),
                       ),
                       value: selectedStatus,
-                      items: ['agendada', 'aberta', 'encerrada'].map((s) => DropdownMenuItem(
+                      items: ['agendada', 'aberta', 'encerrada'].map<DropdownMenuItem<String>>((s) => DropdownMenuItem<String>(
                         value: s,
                         child: Row(
                           children: [
@@ -2525,7 +2525,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         prefixIcon: const Icon(Icons.subject),
                       ),
                       value: selectedTheme,
-                      items: GIRA_THEME_MAPPING.keys.map((t) => DropdownMenuItem(
+                      items: GIRA_THEME_MAPPING.keys.map<DropdownMenuItem<String>>((t) => DropdownMenuItem<String>(
                         value: t,
                         child: Text(t),
                       )).toList(),
@@ -2548,7 +2548,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 4,
-                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? []).map((linha) {
+                          children: (GIRA_THEME_MAPPING[selectedTheme] ?? <String>[]).map<Widget>((linha) {
                             final isChecked = selectedLinhas.contains(linha);
                             return FilterChip(
                               label: Text(linha, style: TextStyle(fontSize: 12, color: isChecked ? Colors.white : Colors.brown[800])),
@@ -2653,7 +2653,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
-                          children: activeMediums.map((m) {
+                          children: activeMediums.map<Widget>((m) {
                             final isSelected = mediumsSelected[m.id] ?? false;
                             final listEntidades = m.entidades ?? <MediumEntidade>[];
                             
@@ -2697,7 +2697,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                                     Padding(
                                       padding: const EdgeInsets.only(left: 32, bottom: 8),
                                       child: Column(
-                                        children: filteredEntidades.map((ent) {
+                                        children: filteredEntidades.map<Widget>((ent) {
                                           return CheckboxListTile(
                                             dense: true,
                                             title: Text(ent.entidadeNome, style: const TextStyle(fontSize: 13)),

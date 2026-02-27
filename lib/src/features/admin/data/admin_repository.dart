@@ -237,21 +237,21 @@ class AdminRepository {
               
               // Compatibilidade: 'entidades' pode não existir
               final rawEntidades = data['entidades'] ?? [];
+              final List<Map<String, dynamic>> entidadesList = [];
               if (rawEntidades is List) {
-                data['entidades'] = rawEntidades.map((e) {
-                  final ent = Map<String, dynamic>.from(e is Map ? e : {});
+                for (final e in rawEntidades) {
+                  final entMap = Map<String, dynamic>.from(e is Map ? e : {});
                   // 'entidadeId' pode não existir no tucpb_adm
-                  ent['entidadeId'] = (ent['entidadeId'] ?? ent['id'] ?? '').toString();
+                  entMap['entidadeId'] = (entMap['entidadeId'] ?? entMap['id'] ?? '').toString();
                   // 'status' pode não existir — padrão: 'ativo'
-                  ent['status'] = (ent['status'] ?? 'ativo').toString();
-                  ent['linha'] = (ent['linha'] ?? '').toString();
-                  ent['tipo'] = (ent['tipo'] ?? '').toString();
-                  ent['nome'] = (ent['nome'] ?? ent['entidadeNome'] ?? '').toString();
-                  return ent;
-                }).toList();
-              } else {
-                data['entidades'] = [];
+                  entMap['status'] = (entMap['status'] ?? 'ativo').toString();
+                  entMap['linha'] = (entMap['linha'] ?? '').toString();
+                  entMap['tipo'] = (entMap['tipo'] ?? '').toString();
+                  entMap['nome'] = (entMap['nome'] ?? entMap['entidadeNome'] ?? '').toString();
+                  entidadesList.add(entMap);
+                }
               }
+              data['entidades'] = entidadesList;
               result.add(Medium.fromJson(data));
             } catch (e) {
               debugPrint('[KIOSK_DEBUG] Erro ao parsear Medium ${doc.id}: $e');
