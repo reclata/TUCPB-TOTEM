@@ -55,6 +55,8 @@ void main() async {
     debugPrint("Firebase init failed: $e");
   }
 
+
+
   runApp(const ProviderScope(child: TerreiroApp()));
 }
 

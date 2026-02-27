@@ -2337,7 +2337,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             final Set<String> inferredLinhasSet = <String>{};
             for (var m in allMediums) {
               if (m == null || !m.ativo) continue;
-              for (var ent in (m.entidades ?? [])) {
+              for (var ent in (m.entidades ?? <MediumEntidade>[])) {
                 if (entitiesSelected[ent.entidadeId] == true) {
                   inferredLinhasSet.add(ent.linha ?? '');
                 }
@@ -2362,7 +2362,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                 entitiesSelected.clear();
                 
                 final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
-                for (var m in (allMediums ?? []).where((m) => m != null && m.ativo)) {
+                for (var m in (allMediums ?? <Medium>[]).where((m) => m != null && m.ativo)) {
                   final compatibleEntities = m.entidades.where((e) {
                     if (e == null) return false;
                     final entLinha = normalizeSpiritualLine(e.linha ?? '');
@@ -2390,17 +2390,17 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             });
           }
 
-          final activeMediums = (allMediums ?? []).where((m) => m != null && m.ativo).toList();
+          final activeMediums = (allMediums ?? <Medium>[]).where((m) => m != null && m.ativo).toList();
           if (selectedLinhas.isNotEmpty) {
             final allowedLinesUpper = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
             activeMediums.sort((a, b) {
-              final aHas = (a.entidades ?? []).any((e) {
+              final aHas = (a.entidades ?? <MediumEntidade>[]).any((e) {
                 if (e == null) return false;
                 final entLinha = normalizeSpiritualLine((e.linha ?? ''));
                 final entTipo = normalizeSpiritualLine((e.tipo ?? ''));
                 return allowedLinesUpper.contains(entLinha) || allowedLinesUpper.contains(entTipo);
               });
-              final bHas = (b.entidades ?? []).any((e) {
+              final bHas = (b.entidades ?? <MediumEntidade>[]).any((e) {
                 if (e == null) return false;
                 final entLinha = normalizeSpiritualLine((e.linha ?? ''));
                 final entTipo = normalizeSpiritualLine((e.tipo ?? ''));
