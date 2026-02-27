@@ -14,6 +14,7 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:terreiro_queue_system/src/shared/setup/printer_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final printerServiceProvider = Provider((ref) => PrinterService());
 
@@ -59,7 +60,7 @@ class PrinterService {
           debugPrint('[PRINTER] Enviando BITMAP (${bytes.length} bytes) para o hardware...');
           await printer.instance.printBitmap(bytes);
         } else if (type == GertecType.network) {
-          debugPrint('[PRINTER] >>> CONFIGURANDO IMPRESSÃO VIA REDE (IP: ${PrinterConfig.defaultIp}) <<<');
+          debugPrint('[PRINTER] >>> CONFIGURANDO IMPRESSÃO VIA REDE <<<');
           final bytes = await _generateTicketBitmap(
             terreiroName: terreiroName,
             giraName: giraName,
@@ -197,7 +198,11 @@ class PrinterService {
   }
 
   Future<void> _printViaNetwork(Uint8List bytes) async {
-    final url = Uri.parse('http://${PrinterConfig.defaultIp}:${PrinterConfig.defaultPort}/print');
+    final prefs = await SharedPreferences.getInstance();
+    final ip = prefs.getString(PrinterConfig.ipKey) ?? PrinterConfig.defaultIp;
+    final port = prefs.getInt(PrinterConfig.portKey) ?? PrinterConfig.defaultPort;
+    
+    final url = Uri.parse('http://$ip:$port/print');
     try {
       debugPrint('[PRINTER] Enviando para $url...');
       final response = await http.post(

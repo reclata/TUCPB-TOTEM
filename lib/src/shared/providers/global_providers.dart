@@ -70,8 +70,8 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
   if (entitiesAsync.hasError) return AsyncError("Erro nas Entidades: ${entitiesAsync.error}", entitiesAsync.stackTrace ?? StackTrace.empty);
 
   final activeGira = activeGiraAsync.value;
-  final mediums = mediumsAsync.value ?? [];
-  final entities = entitiesAsync.value ?? [];
+  final mediums = mediumsAsync.value ?? <Medium>[];
+  final entities = entitiesAsync.value ?? <Entidade>[];
 
   // Filtrar médiuns que estão ATIVOS e PRESENTES na gira (se houver uma aberta)
   final visibleMediums = mediums.where((m) {
@@ -86,14 +86,17 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
   
 // Normalização agora vem de spiritual_utils.dart
 
-  // Quando a linha da gira está vazia (ex: fallback), não filtrar por linha
-  final activeGiraLineNorm = activeGira != null && activeGira.linha.isNotEmpty 
-      ? normalizeSpiritualLine(activeGira.linha) 
-      : null;
-
-  final allowedLines = activeGiraLineNorm != null
-      ? (LINE_GROUPS[activeGiraLineNorm] ?? [activeGiraLineNorm])
-      : null; // null = sem filtro de linha
+  // Determinar as linhas permitidas (flegadas no admin ou sugeridas pelo tema)
+  List<String>? allowedLines;
+  if (activeGira != null) {
+    if (activeGira.linhasParticipantes.isNotEmpty) {
+      // Prioridade: Linhas selecionadas manualmente no Admin
+      allowedLines = activeGira.linhasParticipantes;
+    } else if (activeGira.linha.isNotEmpty) {
+      // Fallback: Usar o grupo de linhas associado à linha principal da gira
+      allowedLines = LINE_GROUPS[normalizeSpiritualLine(activeGira.linha)] ?? [activeGira.linha];
+    }
+  }
 
   List<({Medium medium, Entidade entity})> result = [];
   for (var m in visibleMediums) {
@@ -101,7 +104,7 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
     for (var medEnt in m.entidades) {
       if (medEnt.status == 'ativo') {
         // 1. Filtrar por seleção granular da Gira (se houver)
-        if (activeGira != null && (activeGira.entidadesParticipantes ?? []).isNotEmpty) {
+        if (activeGira != null && (activeGira.entidadesParticipantes ?? <String>[]).isNotEmpty) {
           if (!activeGira.entidadesParticipantes!.contains(medEnt.entidadeId)) {
             continue;
           }
@@ -168,7 +171,7 @@ final currentUserProvider = StreamProvider<Usuario?>((ref) {
     data['perfilAcesso'] = (data['perfilAcesso'] ?? data['perfil'] ?? 'medium').toString().toLowerCase();
     data['terreiroId'] = (data['terreiroId'] ?? 'demo-terreiro').toString();
     data['senha'] = (data['senha'] ?? data['senhaInicial'] ?? '').toString();
-    data['permissoes'] = List<String>.from(data['permissoes'] ?? []);
+    data['permissoes'] = List<String>.from(data['permissoes'] ?? <String>[]);
     data['ativo'] = data['ativo'] ?? true;
 
     return Usuario.fromJson(data);

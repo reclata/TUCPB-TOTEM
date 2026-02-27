@@ -14,6 +14,8 @@ import 'usuarios_section.dart';
 import 'senhas_screen.dart';
 import 'package:terreiro_queue_system/src/shared/services/printer_service.dart';
 import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
+import 'package:terreiro_queue_system/src/shared/setup/printer_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const List<String> LINHA_OPTIONS = [
   'Caboclo',
@@ -442,7 +444,7 @@ class _DashboardScreen extends ConsumerWidget {
               }
               
               final presentMediumsCount = activeGira.presencas.values.where((p) => p).length;
-              final todayTickets = ticketsAsync.value?.where((t) => t.giraId == activeGira.id).toList() ?? [];
+              final todayTickets = (ticketsAsync.value?.where((t) => t.giraId == activeGira.id).toList() ?? <Ticket>[]).whereType<Ticket>().toList();
               final assistanceCount = todayTickets.length;
               final calledCount = todayTickets.where((t) => t.status != 'emitida').length;
 
@@ -663,8 +665,8 @@ class _DashboardScreen extends ConsumerWidget {
           // Charts Row
           ticketsAsync.when(
             data: (tickets) {
-              final giras = girasAsync.value ?? [];
-              final mediums = mediumsAsync.value ?? [];
+              final giras = (girasAsync.value ?? <Gira>[]).whereType<Gira>().toList();
+              final mediums = (mediumsAsync.value ?? <Medium>[]).whereType<Medium>().toList();
               
               // Calcs for Charts
               final completedTickets = tickets.where((t) => t.status == 'atendida' || t.dataHoraAtendida != null).toList();
@@ -1709,7 +1711,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
 
               final date = DateTime(_currentMonth.year, _currentMonth.month, dayNumber);
               final dateKey = '${date.year}-${date.month}-${date.day}';
-              final dayGiras = girasByDate[dateKey] ?? [];
+              final dayGiras = girasByDate[dateKey] ?? <Gira>[];
               final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
               final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
               final hasGira = dayGiras.isNotEmpty;
@@ -1847,7 +1849,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     Map<String, bool> entitiesSelected = <String, bool>{};
     
     final linhasAsync = ref.read(linhasFromMediumsProvider(terreiroId));
-    final registeredLinhas = (linhasAsync.value ?? []).whereType<String>().toList();
+    final registeredLinhas = (linhasAsync.value ?? <String>[]).whereType<String>().toList();
     final dropdownItems = {
       ...LINHA_OPTIONS,
       ...registeredLinhas,
@@ -1863,7 +1865,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
-          final allMediums = mediumsAsync.value ?? [];
+          final allMediums = (mediumsAsync.value ?? <Medium>[]).whereType<Medium>().toList();
           
           if (!initialized && mediumsAsync.hasValue) {
              initialized = true;
@@ -1875,7 +1877,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               selectedTheme = theme;
               if (theme != null) {
               temaCtrl.text = theme;
-              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? []);
+              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? <String>[]);
               
               // Pré-selecionar médiuns e entidades daquelas linhas
               mediumsSelected.clear();
@@ -1883,7 +1885,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               
               final allowedLinesNorm = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
 
-              for (var m in allMediums.where((m) => m.ativo)) {
+              for (var m in allMediums.where((m) => m != null && m.ativo)) {
                 final compatibleEntities = m.entidades.where((e) {
                   if (e == null) return false;
                   final entLinha = normalizeSpiritualLine(e.linha ?? '');
@@ -1915,7 +1917,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
             });
           }
           
-          final activeMediums = allMediums.where((m) => m.ativo).toList();
+          final activeMediums = allMediums.where((m) => m != null && m.ativo).toList();
           if (selectedLinhas.isNotEmpty) {
             final allowedLinesUpper = selectedLinhas.map((l) => normalizeSpiritualLine(l)).toList();
             // Ordenar: primeiro os que têm entidade para as linhas selecionadas
@@ -1935,7 +1937,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               
               if (aHasCompatible && !bHasCompatible) return -1;
               if (!aHasCompatible && bHasCompatible) return 1;
-              return a.nome.compareTo(b.nome);
+              return (a.nome ?? '').compareTo(b.nome ?? '');
             });
           }
           
@@ -2244,6 +2246,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     encerramentoKioskAtivo: encerramentoAtivo,
                     mediumsParticipantes: participantes,
                     entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+                    linhasParticipantes: selectedLinhas,
                     presencas: presencas,
                   );
                   try {
@@ -2296,14 +2299,13 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
         builder: (ctx, setDialogState) {
           try {
           final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
-          final allMediums = mediumsAsync.value ?? [];
+          final allMediums = (mediumsAsync.value ?? <Medium>[]).whereType<Medium>().toList();
 
           if (!initialized && mediumsAsync.hasValue) {
             initialized = true;
           
-            final currentEntidadesPart = List<String>.from(gira.entidadesParticipantes ?? []);
-            final currentMediumsPart = List<String>.from(gira.mediumsParticipantes ?? []);
-
+            final currentEntidadesPart = List<String>.from(gira.entidadesParticipantes ?? <String>[]);
+            final currentMediumsPart = List<String>.from(gira.mediumsParticipantes ?? <String>[]);
             // Inicializar entidades selecionadas
             for (var entId in currentEntidadesPart) {
               entitiesSelected[entId] = true;
@@ -2333,19 +2335,24 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                else if (l == normalizeSpiritualLine('BAIANO')) selectedTheme = 'Gira de Baiano';
                else if (l == normalizeSpiritualLine('CIGANO')) selectedTheme = 'Gira de Cigano';
             }
-            // Inferir linhas
-            final Set<String> inferredLinhasSet = <String>{};
-            for (var m in allMediums) {
-              if (m == null || !m.ativo) continue;
-              for (var ent in (m.entidades ?? <MediumEntidade>[])) {
-                if (entitiesSelected[ent.entidadeId] == true) {
-                  inferredLinhasSet.add(ent.linha ?? '');
+            if (gira.linhasParticipantes.isNotEmpty) {
+              selectedLinhas = List<String>.from(gira.linhasParticipantes);
+            } else {
+              // Inferir linhas (Fallback para dados antigos)
+              final Set<String> inferredLinhasSet = <String>{};
+              for (var m in allMediums) {
+                if (m == null || !m.ativo) continue;
+                for (var ent in (m.entidades ?? <MediumEntidade>[])) {
+                  if (entitiesSelected[ent.entidadeId] == true) {
+                    inferredLinhasSet.add(ent.linha ?? '');
+                  }
                 }
               }
+              selectedLinhas = inferredLinhasSet.where((l) => l.isNotEmpty).toList();
             }
-            selectedLinhas = inferredLinhasSet.where((l) => l.isNotEmpty).toList();
+
             if (selectedLinhas.isEmpty && selectedTheme != null) {
-              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[selectedTheme] ?? []);
+              selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[selectedTheme] ?? <String>[]);
             }
             initialized = true;
           }
@@ -2354,7 +2361,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               selectedTheme = theme;
               if (theme != null) {
                 temaCtrl.text = theme;
-                selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? []);
+                selectedLinhas = List<String>.from(GIRA_THEME_MAPPING[theme] ?? <String>[]);
                 
                 // Opcional: Limpar e reaplicar seleção sugerida ao trocar o tema em uma edição?
                 // Melhor limpar para evitar salvar entidades de linhas diferentes por engano.
@@ -2727,7 +2734,6 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                           }).toList(),
                         ),
                       ),
-
                     const SizedBox(height: 20),
                     
                     // Botão Sincronizar com Kiosk
@@ -2773,6 +2779,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                             encerramentoKioskAtivo: encerramentoAtivo,
                             mediumsParticipantes: participantes,
                             entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+                            linhasParticipantes: selectedLinhas,
                             presencas: presencas,
                           );
                           await ref.read(adminRepositoryProvider).updateGira(updatedGira);
@@ -2795,7 +2802,6 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               ),
             ),
             actions: [
-              const Spacer(),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text("CANCELAR"),
@@ -2836,6 +2842,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
                     encerramentoKioskAtivo: encerramentoAtivo,
                     mediumsParticipantes: participantes,
                     entidadesParticipantes: entitiesSelected.entries.where((e) => e.value).map((e) => e.key).toList(),
+                    linhasParticipantes: selectedLinhas,
                     presencas: presencas,
                   );
                   try {
@@ -3187,7 +3194,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
   void _addMediumDialog(BuildContext context, WidgetRef ref, String terreiroId) {
     final nameCtrl = TextEditingController();
     final maxFichasCtrl = TextEditingController(text: '10');
-    final allEntities = ref.read(entityListProvider(terreiroId)).value ?? [];
+    final allEntities = (ref.read(entityListProvider(terreiroId)).value ?? <Entidade>[]).whereType<Entidade>().toList();
     final List<MediumEntidade> selectedEntities = [];
 
     showDialog(
@@ -3372,7 +3379,7 @@ class _MediumsListState extends ConsumerState<_MediumsList> {
   void _editMediumDialog(BuildContext context, WidgetRef ref, String terreiroId, Medium medium) {
     final nameCtrl = TextEditingController(text: medium.nome);
     final maxFichasCtrl = TextEditingController(text: medium.maxFichas.toString());
-    final allEntities = ref.read(entityListProvider(terreiroId)).value ?? [];
+    final allEntities = (ref.read(entityListProvider(terreiroId)).value ?? <Entidade>[]).whereType<Entidade>().toList();
     final List<MediumEntidade> selectedEntities = List<MediumEntidade>.from(medium.entidades);
 
     showDialog(
@@ -4107,9 +4114,23 @@ class _SistemaScreen extends ConsumerStatefulWidget {
 }
 
 class _SistemaScreenState extends ConsumerState<_SistemaScreen> {
-  final _ipController = TextEditingController(text: '192.168.1.17');
-  final _portController = TextEditingController(text: '43645');
+  final _ipController = TextEditingController();
+  final _portController = TextEditingController();
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _ipController.text = prefs.getString(PrinterConfig.ipKey) ?? PrinterConfig.defaultIp;
+      _portController.text = prefs.getInt(PrinterConfig.portKey)?.toString() ?? PrinterConfig.defaultPort.toString();
+    });
+  }
 
   @override
   void dispose() {
@@ -4223,15 +4244,26 @@ class _SistemaScreenState extends ConsumerState<_SistemaScreen> {
 
   Future<void> _saveSettings() async {
     setState(() => _isSaving = true);
-    // Aqui poderíamos salvar no Firestore ou SharedPreferences
-    // Por enquanto, apenas feedback visual
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isSaving = false);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configurações salvas com sucesso!'), backgroundColor: Colors.green),
-      );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(PrinterConfig.ipKey, _ipController.text.trim());
+      await prefs.setInt(PrinterConfig.portKey, int.tryParse(_portController.text.trim()) ?? PrinterConfig.defaultPort);
+      
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Configurações salvas com sucesso!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 

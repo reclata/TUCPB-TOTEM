@@ -30,6 +30,12 @@ Gira _$GiraFromJson(Map<String, dynamic> json) => Gira(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  linhasParticipantes:
+      (Gira._readLinhasParticipantes(json, 'linhasParticipantes')
+              as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
   presencas:
       (Gira._readPresencas(json, 'presencas') as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as bool),
@@ -51,6 +57,7 @@ Map<String, dynamic> _$GiraToJson(Gira instance) => <String, dynamic>{
   'encerramentoKioskAtivo': instance.encerramentoKioskAtivo,
   'mediumsParticipantes': instance.mediumsParticipantes,
   'entidadesParticipantes': instance.entidadesParticipantes,
+  'linhasParticipantes': instance.linhasParticipantes,
   'presencas': instance.presencas,
 };
 

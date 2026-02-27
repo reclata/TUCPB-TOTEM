@@ -333,15 +333,15 @@ extension _KioskScreenStateUI on _KioskScreenState {
     }
 
     final today = DateTime.now();
-    final tickets = (ticketsAsync.value ?? []).where((t) {
+    final tickets = (ticketsAsync.value ?? <Ticket>[]).where((t) {
       return t.dataHoraEmissao.year == today.year &&
              t.dataHoraEmissao.month == today.month &&
              t.dataHoraEmissao.day == today.day;
     }).toList()..sort((a, b) => b.dataHoraEmissao.compareTo(a.dataHoraEmissao)); // Mais recentes primeiro
 
-    final giras = girasAsync.value ?? [];
-    final entities = entitiesAsync.value ?? [];
-    final mediums = mediumsAsync.value ?? [];
+    final giras = girasAsync.value ?? <Gira>[];
+    final entities = entitiesAsync.value ?? <Entidade>[];
+    final mediums = mediumsAsync.value ?? <Medium>[];
 
     return Column(
       children: [
@@ -523,24 +523,15 @@ extension _KioskScreenStateUI on _KioskScreenState {
                 }
 
                 if (_selectedLine == null) {
-                  // ETAPA 1: Mostrar seleção de linha
-                  List<String> lines;
-                  if (gira.linha.isEmpty) {
-                    lines = mediums
-                        .map((m) => m.entity.linha)
-                        .where((l) => l.isNotEmpty)
-                        .toSet()
-                        .toList()
-                      ..sort();
-                  } else {
-                    final allowedGiraLines = LINE_GROUPS[gira.linha] ?? [gira.linha];
-                    lines = mediums
-                        .map((m) => m.entity.linha)
-                        .where((l) => l.isNotEmpty && allowedGiraLines.any((a) => a.toUpperCase() == l.toUpperCase()))
-                        .toSet()
-                        .toList()
-                      ..sort();
-                  }
+                  // ETAPA 1: Mostrar seleção de linha baseada nas entidades disponíveis (já filtradas pelo provider)
+                  final lines = mediums
+                      .map((m) => m.entity.linha)
+                      .where((l) => l.isNotEmpty)
+                      .map((l) => normalizeSpiritualLine(l))
+                      .where((l) => l.toUpperCase() == 'EXU') // Filtro temporário para a gira de hoje
+                      .toSet()
+                      .toList()
+                    ..sort();
 
                   if (lines.isEmpty) {
                     // Fallback: mostrar todas as linhas disponíveis

@@ -42,22 +42,45 @@ class Gira {
   @JsonKey(readValue: _readEntidadesParticipantes)
   final List<String> entidadesParticipantes; // IDs das entidades específicas selecionadas
 
+  @JsonKey(readValue: _readLinhasParticipantes)
+  final List<String> linhasParticipantes; // Nomes das linhas selecionadas (flags)
+
   @JsonKey(readValue: _readPresencas)
   final Map<String, bool> presencas; // mediumId -> presente (true/false)
 
+  static Object? _readLinhasParticipantes(Map json, String key) {
+    final val = json['linhasParticipantes'] ?? json['linhas_participantes'];
+    if (val is List) {
+       return val.map((e) => e.toString()).toList();
+    }
+    return <String>[];
+  }
+
   static Object? _readMediumsParticipantes(Map json, String key) {
     final val = json['mediumsParticipantes'] ?? json['mediums_participantes'];
-    return val is List ? List<dynamic>.from(val) : <dynamic>[];
+    if (val is List) {
+       return val.map((e) => e.toString()).toList();
+    }
+    return <String>[];
   }
   
   static Object? _readEntidadesParticipantes(Map json, String key) {
     final val = json['entidadesParticipantes'] ?? json['entidades_participantes'];
-    return val is List ? List<dynamic>.from(val) : <dynamic>[];
+    if (val is List) {
+       return val.map((e) => e.toString()).toList();
+    }
+    return <String>[];
   }
   
   static Object? _readPresencas(Map json, String key) {
     final val = json['presencas'] ?? json['presences'];
-    return val is Map ? Map<String, dynamic>.from(val) : <String, dynamic>{};
+    final Map<String, bool> res = {};
+    if (val is Map) {
+       val.forEach((k, v) {
+          res[k.toString()] = v == true;
+       });
+    }
+    return res;
   }
 
   const Gira({
@@ -74,6 +97,7 @@ class Gira {
     this.encerramentoKioskAtivo = false,
     this.mediumsParticipantes = const <String>[],
     this.entidadesParticipantes = const <String>[],
+    this.linhasParticipantes = const <String>[],
     this.presencas = const <String, bool>{},
   });
 
@@ -145,7 +169,7 @@ class Medium {
   final List<MediumEntidade> entidades; // List of entities they channel
 
   static Object? _readMediumEntidades(Map json, String key) {
-    final raw = json['entidades'] ?? [];
+    final raw = json['entidades'] ?? <dynamic>[];
     if (raw is List) {
       return raw.map((e) => Map<String, dynamic>.from(e is Map ? e : {})).toList();
     }

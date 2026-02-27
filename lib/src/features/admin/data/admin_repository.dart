@@ -27,7 +27,7 @@ class AdminRepository {
 
       for (var doc in mediumsSnap.docs) {
         final data = doc.data();
-        final entidades = (data['entidades'] as List?) ?? [];
+        final entidades = (data['entidades'] as List?) ?? <dynamic>[];
         final hasCompatibleEntity = entidades.any((e) {
           final entLinha = normalizeSpiritualLine(e['linha'] ?? '');
           final entTipo = normalizeSpiritualLine(e['tipo'] ?? '');
@@ -93,11 +93,14 @@ class AdminRepository {
               data['encerramentoKioskAtivo'] = data['encerramentoKioskAtivo'] == true;
               
               // Explicit type conversion for Lists (String only)
-              final List rawMediums = (data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? []) as List;
+              final List rawMediums = (data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? <dynamic>[]) as List;
               data['mediumsParticipantes'] = rawMediums.map((e) => e.toString()).toList();
               
-              final List rawEntidadesPart = (data['entidadesParticipantes'] ?? data['entidades_participantes'] ?? []) as List;
+              final List rawEntidadesPart = (data['entidadesParticipantes'] ?? data['entidades_participantes'] ?? <dynamic>[]) as List;
               data['entidadesParticipantes'] = rawEntidadesPart.map((e) => e.toString()).toList();
+              
+              final List rawLinhasPart = (data['linhasParticipantes'] ?? data['linhas_participantes'] ?? <dynamic>[]) as List;
+              data['linhasParticipantes'] = rawLinhasPart.map((e) => e.toString()).toList();
               
               // Explicit type conversion for Map (String -> bool)
               final rawPresencas = data['presencas'] ?? data['presences'] ?? {};
@@ -236,7 +239,7 @@ class AdminRepository {
               data['ultimaGira'] = (data['ultimaGira'] ?? '').toString();
               
               // Compatibilidade: 'entidades' pode não existir
-              final rawEntidades = data['entidades'] ?? [];
+              final rawEntidades = data['entidades'] ?? <dynamic>[];
               final List<Map<String, dynamic>> entidadesList = [];
               if (rawEntidades is List) {
                 for (final e in rawEntidades) {
@@ -298,7 +301,7 @@ class AdminRepository {
               data['perfilAcesso'] = (data['perfilAcesso'] ?? data['perfil'] ?? 'medium').toString().toLowerCase();
               data['terreiroId'] = (data['terreiroId'] ?? terreiroId).toString();
               data['senha'] = (data['senha'] ?? data['senhaInicial'] ?? '').toString();
-              data['permissoes'] = List<String>.from(data['permissoes'] ?? []);
+              data['permissoes'] = List<String>.from(data['permissoes'] ?? <String>[]);
               data['ativo'] = data['ativo'] ?? true;
 
               result.add(Usuario.fromJson(data));
