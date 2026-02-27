@@ -45,12 +45,20 @@ class Gira {
   @JsonKey(readValue: _readPresencas)
   final Map<String, bool> presencas; // mediumId -> presente (true/false)
 
-  static Object? _readMediumsParticipantes(Map json, String key) => 
-      List<dynamic>.from(json['mediumsParticipantes'] ?? json['mediums_participantes'] ?? []);
-  static Object? _readEntidadesParticipantes(Map json, String key) => 
-      List<dynamic>.from(json['entidadesParticipantes'] ?? json['entidades_participantes'] ?? []);
-  static Object? _readPresencas(Map json, String key) => 
-      Map<String, dynamic>.from(json['presencas'] ?? json['presences'] ?? <String, dynamic>{});
+  static Object? _readMediumsParticipantes(Map json, String key) {
+    final val = json['mediumsParticipantes'] ?? json['mediums_participantes'];
+    return val is List ? List<dynamic>.from(val) : <dynamic>[];
+  }
+  
+  static Object? _readEntidadesParticipantes(Map json, String key) {
+    final val = json['entidadesParticipantes'] ?? json['entidades_participantes'];
+    return val is List ? List<dynamic>.from(val) : <dynamic>[];
+  }
+  
+  static Object? _readPresencas(Map json, String key) {
+    final val = json['presencas'] ?? json['presences'];
+    return val is Map ? Map<String, dynamic>.from(val) : <String, dynamic>{};
+  }
 
   const Gira({
     required this.id,
