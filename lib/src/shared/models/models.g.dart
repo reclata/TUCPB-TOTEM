@@ -98,7 +98,7 @@ Medium _$MediumFromJson(Map<String, dynamic> json) => Medium(
       (Medium._readMediumEntidades(json, 'entidades') as List<dynamic>?)
           ?.map((e) => MediumEntidade.fromJson(e as Map<String, dynamic>))
           .toList() ??
-      const [],
+      const <MediumEntidade>[],
   girasParticipadas: (json['girasParticipadas'] as num?)?.toInt() ?? 0,
   atendimentosRealizados:
       (json['atendimentosRealizados'] as num?)?.toInt() ?? 0,
@@ -201,7 +201,7 @@ Usuario _$UsuarioFromJson(Map<String, dynamic> json) => Usuario(
       (json['permissoes'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
-      const [],
+      const <String>[],
   ativo: json['ativo'] as bool? ?? true,
 );
 

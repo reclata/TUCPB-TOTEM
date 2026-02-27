@@ -141,7 +141,7 @@ class Medium {
     if (raw is List) {
       return raw.map((e) => Map<String, dynamic>.from(e is Map ? e : {})).toList();
     }
-    return <dynamic>[];
+    return <Map<String, dynamic>>[];
   }
   
   // Stats
@@ -164,7 +164,7 @@ class Medium {
     this.terreiroId,
     this.nome = '',
     this.ativo = true,
-    this.entidades = const [],
+    this.entidades = const <MediumEntidade>[],
     this.girasParticipadas = 0,
     this.atendimentosRealizados = 0,
     this.faltas = 0,
@@ -243,7 +243,7 @@ class Usuario {
     required this.login,
     required this.senha,
     required this.perfilAcesso,
-    this.permissoes = const [],
+    this.permissoes = const <String>[],
     this.ativo = true,
   });
 
