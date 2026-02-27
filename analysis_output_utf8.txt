@@ -1,0 +1,388 @@
+﻿Analyzing TOTEM...                                              
+
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\main.dart:5:8 - unused_import
+warning - Unused import: 'package:terreiro_queue_system/src/shared/services/printer_service.dart' - lib\main.dart:18:8 - unused_import
+warning - Unused import: 'package:terreiro_queue_system/src/shared/providers/global_providers.dart' - lib\main.dart:22:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - lib\main.dart:90:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\main.dart:97:16 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\main.dart:105:16 - prefer_const_constructors
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\data\admin_repository.dart:80:27 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\data\admin_repository.dart:80:36 - dead_code
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\data\admin_repository.dart:151:27 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\data\admin_repository.dart:151:36 - dead_code
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\data\admin_repository.dart:226:27 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\data\admin_repository.dart:226:36 - dead_code
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\data\admin_repository.dart:294:27 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\data\admin_repository.dart:294:36 - dead_code
+   info - The imported package 'uuid' isn't a dependency of the importing package - lib\src\features\admin\presentation\admin_screen.dart:6:8 - depend_on_referenced_packages
+warning - Unused import: 'package:terreiro_queue_system/src/features/queue/data/firestore_queue_repository.dart' - lib\src\features\admin\presentation\admin_screen.dart:10:8 - unused_import
+   info - The constant name 'LINHA_OPTIONS' isn't a lowerCamelCase identifier - lib\src\features\admin\presentation\admin_screen.dart:20:20 - constant_identifier_names
+   info - The constant name 'TIPO_OPTIONS' isn't a lowerCamelCase identifier - lib\src\features\admin\presentation\admin_screen.dart:35:20 - constant_identifier_names
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:83:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:184:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:363:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:391:78 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\src\features\admin\presentation\admin_screen.dart:411:50 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\src\features\admin\presentation\admin_screen.dart:415:50 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:457:40 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:458:45 - curly_braces_in_flow_control_structures
+   info - Use 'const' for final variables initialized to a constant value - lib\src\features\admin\presentation\admin_screen.dart:460:23 - prefer_const_declarations
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:519:47 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\admin_screen.dart:595:47 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\src\features\admin\presentation\admin_screen.dart:595:66 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\admin_screen.dart:596:50 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\src\features\admin\presentation\admin_screen.dart:596:69 - prefer_const_literals_to_create_immutables
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:842:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:877:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:892:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:1016:32 - deprecated_member_use
+warning - The value of the field '_selectedDate' isn't used - lib\src\features\admin\presentation\admin_screen.dart:1040:13 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:1050:33 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:1239:17 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\src\features\admin\presentation\admin_screen.dart:1378:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\src\features\admin\presentation\admin_screen.dart:1379:38 - use_build_context_synchronously
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\admin_screen.dart:1495:20 - prefer_const_constructors
+warning - The value of the local variable 'screenWidth' isn't used - lib\src\features\admin\presentation\admin_screen.dart:1541:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:1740:46 - deprecated_member_use
+warning - The value of the local variable 'linhaCtrl' isn't used - lib\src\features\admin\presentation\admin_screen.dart:1844:11 - unused_local_variable
+warning - The value of the local variable 'selectedLinha' isn't used - lib\src\features\admin\presentation\admin_screen.dart:1845:13 - unused_local_variable
+   info - The local variable '_onThemeChanged' starts with an underscore - lib\src\features\admin\presentation\admin_screen.dart:1875:16 - no_leading_underscores_for_local_identifiers
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:1888:55 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:1890:25 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1890:34 - dead_code
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1891:67 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1891:70 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1892:68 - dead_null_aware_expression
+   info - The local variable '_toggleLinha' starts with an underscore - lib\src\features\admin\presentation\admin_screen.dart:1907:16 - no_leading_underscores_for_local_identifiers
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:1920:59 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:1926:23 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1926:32 - dead_code
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1927:65 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1927:68 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1928:66 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:1932:23 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1932:32 - dead_code
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1933:65 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1933:68 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1934:66 - dead_null_aware_expression
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:1940:30 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1940:33 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:1940:57 - dead_null_aware_expression
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:1994:23 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\src\features\admin\presentation\admin_screen.dart:2080:33 - deprecated_member_use
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:2125:63 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2125:66 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\src\features\admin\presentation\admin_screen.dart:2256:44 - use_build_context_synchronously
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:2278:60 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2278:63 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2279:81 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2280:79 - dead_null_aware_expression
+warning - The value of the local variable 'linhaCtrl' isn't used - lib\src\features\admin\presentation\admin_screen.dart:2282:11 - unused_local_variable
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2288:42 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2307:91 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2308:87 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:2314:53 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2318:57 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2319:59 - dead_null_aware_expression
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2330:61 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2331:65 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2332:67 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2333:69 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2334:101 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2335:64 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\src\features\admin\presentation\admin_screen.dart:2336:64 - curly_braces_in_flow_control_structures
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:2344:23 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2345:49 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2347:56 - dead_null_aware_expression
+   info - The local variable '_onThemeChanged' starts with an underscore - lib\src\features\admin\presentation\admin_screen.dart:2359:16 - no_leading_underscores_for_local_identifiers
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2372:46 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:2372:73 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:2374:27 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2375:72 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2376:70 - dead_null_aware_expression
+   info - The local variable '_toggleLinha' starts with an underscore - lib\src\features\admin\presentation\admin_screen.dart:2390:16 - no_leading_underscores_for_local_identifiers
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2400:48 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:2400:75 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2404:44 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:2405:23 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2406:69 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2407:67 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2410:44 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:2411:23 - unnecessary_null_comparison
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2412:69 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2413:67 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2418:33 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2418:57 - dead_null_aware_expression
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\admin_screen.dart:2428:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\admin_screen.dart:2429:26 - prefer_const_constructors
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:2445:40 - unnecessary_null_comparison
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\src\features\admin\presentation\admin_screen.dart:2450:52 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:2505:23 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:2534:23 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\src\features\admin\presentation\admin_screen.dart:2620:33 - deprecated_member_use
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2665:66 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\src\features\admin\presentation\admin_screen.dart:2681:55 - dead_null_aware_expression
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:2823:53 - unnecessary_null_comparison
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\src\features\admin\presentation\admin_screen.dart:2852:44 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:2936:25 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\src\features\admin\presentation\admin_screen.dart:3018:71 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\src\features\admin\presentation\admin_screen.dart:3018:108 - unnecessary_non_null_assertion
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:3018:113 - dead_code
+warning - The operand can't be 'null', so the condition is always 'false' - lib\src\features\admin\presentation\admin_screen.dart:3019:61 - unnecessary_null_comparison
+warning - Dead code - lib\src\features\admin\presentation\admin_screen.dart:3020:45 - dead_code
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3081:43 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3596:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3606:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3616:21 - deprecated_member_use
+   info - Use 'const' for final variables initialized to a constant value - lib\src\features\admin\presentation\admin_screen.dart:3681:5 - prefer_const_declarations
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3792:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3802:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3862:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\admin_screen.dart:3872:17 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\src\features\admin\presentation\admin_screen.dart:4057:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\admin_screen.dart:4161:47 - deprecated_member_use
+warning - Unused import: 'package:terreiro_queue_system/src/features/admin/data/admin_repository.dart' - lib\src\features\admin\presentation\senhas_screen.dart:7:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\senhas_screen.dart:323:49 - prefer_const_constructors
+   info - Use 'const' for final variables initialized to a constant value - lib\src\features\admin\presentation\senhas_screen.dart:369:29 - prefer_const_declarations
+   info - Use 'const' with the constructor to improve performance - lib\src\features\admin\presentation\senhas_screen.dart:600:25 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\senhas_screen.dart:708:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\admin\presentation\senhas_screen.dart:1099:52 - deprecated_member_use
+   info - The imported package 'uuid' isn't a dependency of the importing package - lib\src\features\admin\presentation\usuarios_section.dart:4:8 - depend_on_referenced_packages
+warning - Unused import: '../../../shared/providers/global_providers.dart' - lib\src\features\admin\presentation\usuarios_section.dart:6:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\usuarios_section.dart:221:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\src\features\admin\presentation\usuarios_section.dart:321:21 - deprecated_member_use
+warning - The declaration '_giraLineGroups' isn't referenced - lib\src\features\kiosk\presentation\kiosk_screen.dart:44:33 - unused_element
+warning - The declaration '_isKioskOpen' isn't referenced - lib\src\features\kiosk\presentation\kiosk_screen.dart:138:8 - unused_element
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:186:9 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:188:18 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\src\features\kiosk\presentation\kiosk_screen.dart:192:22 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:193:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:193:67 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:205:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:288:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:289:51 - deprecated_member_use
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:354:34 - invalid_use_of_protected_member
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:375:122 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:376:127 - prefer_const_constructors
+   info - Unnecessary use of string interpolation - lib\src\features\kiosk\presentation\kiosk_screen.dart:424:37 - unnecessary_string_interpolations
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:426:89 - prefer_const_constructors
+warning - The declaration '_buildClosedState' isn't referenced - lib\src\features\kiosk\presentation\kiosk_screen.dart:452:10 - unused_element
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:486:21 - invalid_use_of_protected_member
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:491:21 - invalid_use_of_protected_member
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:503:26 - prefer_const_constructors
+  error - The final variable 'lines' can only be set once - lib\src\features\kiosk\presentation\kiosk_screen.dart:538:21 - assignment_to_final_local
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:556:23 - invalid_use_of_protected_member
+   info - Unnecessary braces in a string interpolation - lib\src\features\kiosk\presentation\kiosk_screen.dart:573:77 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:657:77 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:664:79 - deprecated_member_use
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:678:22 - invalid_use_of_protected_member
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:684:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:724:44 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:730:26 - prefer_const_constructors
+warning - The declaration '_buildTipoButton' isn't referenced - lib\src\features\kiosk\presentation\kiosk_screen.dart:740:10 - unused_element
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:744:22 - invalid_use_of_protected_member
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:750:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\kiosk\presentation\kiosk_screen.dart:782:44 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:788:26 - prefer_const_constructors
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:916:7 - invalid_use_of_protected_member
+warning - The member 'setState' can only be used within instance members of subclasses of 'State' - lib\src\features\kiosk\presentation\kiosk_screen.dart:951:11 - invalid_use_of_protected_member
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:988:11 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:990:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\src\features\kiosk\presentation\kiosk_screen.dart:1000:20 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\tv\presentation\tv_screen.dart:75:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\src\features\tv\presentation\tv_screen.dart:201:29 - deprecated_member_use
+warning - Dead code - lib\src\shared\providers\global_providers.dart:107:70 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\src\shared\providers\global_providers.dart:107:73 - dead_null_aware_expression
+warning - The '!' will have no effect because the receiver can't be null - lib\src\shared\providers\global_providers.dart:108:49 - unnecessary_non_null_assertion
+warning - Unused import: 'package:flutter/services.dart' - lib\src\shared\services\printer_service.dart:11:8 - unused_import
+   info - The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' - lib\src\shared\services\printer_service.dart:13:8 - unnecessary_import
+warning - Unused import: 'dart:io' - lib\src\shared\services\printer_service.dart:14:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - lib\src\shared\services\printer_service.dart:150:16 - prefer_const_constructors
+   info - The constant name 'GIRA_THEME_MAPPING' isn't a lowerCamelCase identifier - lib\src\shared\utils\spiritual_utils.dart:3:33 - constant_identifier_names
+   info - The constant name 'LINE_GROUPS' isn't a lowerCamelCase identifier - lib\src\shared\utils\spiritual_utils.dart:14:33 - constant_identifier_names
+   info - The constant name 'ALLOWED_TABLET_USERS' isn't a lowerCamelCase identifier - lib\src\shared\utils\spiritual_utils.dart:26:20 - constant_identifier_names
+  error - A value of type 'Future<dynamic>' can't be returned from the method 'cut' because it has a return type of 'Future<PrinterResponse?>' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:17:14 - return_of_invalid_type
+  error - The method 'printLine' isn't defined for the type 'GertecPosPrinterController' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:27:38 - undefined_method
+  error - A value of type 'Future<dynamic>' can't be returned from the method 'printTextList' because it has a return type of 'Future<PrinterResponse?>' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:37:14 - return_of_invalid_type
+  error - A value of type 'Future<dynamic>' can't be returned from the method 'barcodePrint' because it has a return type of 'Future<PrinterResponse?>' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:53:14 - return_of_invalid_type
+  error - The argument type 'BarcodePrint' can't be assigned to the parameter type 'Map<String, dynamic>'.  - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:53:51 - argument_type_not_assignable
+  error - A value of type 'Future<dynamic>' can't be returned from the method 'wrapLine' because it has a return type of 'Future<PrinterResponse?>' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:62:14 - return_of_invalid_type
+  error - A value of type 'Future<dynamic>' can't be returned from the method 'checkStatusPrinter' because it has a return type of 'Future<PrinterResponse?>' - plugins\gertec_pos_printer\example\lib\service\gertec_service.dart:71:14 - return_of_invalid_type
+  error - Target of URI doesn't exist: 'package:gertec_printer_example/main.dart' - plugins\gertec_pos_printer\example\test\widget_test.dart:11:8 - uri_does_not_exist
+  error - The name 'MyApp' isn't a class - plugins\gertec_pos_printer\example\test\widget_test.dart:16:35 - creation_with_non_type
+warning - This default clause is covered by the previous cases - plugins\gertec_pos_printer\lib\printer\style\gertec_printer_style.dart:20:7 - unreachable_switch_default
+warning - This default clause is covered by the previous cases - plugins\gertec_pos_printer\lib\printer\style\gertec_printer_style.dart:34:7 - unreachable_switch_default
+warning - This default clause is covered by the previous cases - plugins\gertec_pos_printer\lib\printer\style\gertec_printer_style.dart:52:7 - unreachable_switch_default
+warning - Dead code - tucpb_adm\lib\src\features\admin\data\estoque_repository.dart:77:47 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - tucpb_adm\lib\src\features\admin\data\estoque_repository.dart:77:50 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - tucpb_adm\lib\src\features\admin\data\estoque_repository.dart:77:90 - dead_null_aware_expression
+   info - Use 'const' for final variables initialized to a constant value - tucpb_adm\lib\src\features\admin\data\giras_repository.dart:76:5 - prefer_const_declarations
+   info - Don't invoke 'print' in production code - tucpb_adm\lib\src\features\admin\data\log_repository.dart:49:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\album\album_screen.dart:232:33 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\album\album_screen.dart:301:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\anotacoes\anotacoes_screen.dart:68:29 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\anotacoes\anotacoes_screen.dart:131:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\anotacoes\anotacoes_screen.dart:156:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\anotacoes\anotacoes_screen.dart:304:51 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\anotacoes\anotacoes_screen.dart:512:17 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:41:23 - prefer_const_literals_to_create_immutables
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:216:31 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:244:43 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:258:33 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:265:29 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:315:11 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:376:30 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:377:28 - curly_braces_in_flow_control_structures
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:399:18 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\anotacoes\tabs\aba_obrigacoes_festas.dart:497:15 - deprecated_member_use
+   info - The imported package 'uuid' isn't a dependency of the importing package - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:7:8 - depend_on_referenced_packages
+warning - Unused import: 'package:tucpb_adm/src/features/admin/presentation/cadastro/novo_cadastro_controller.dart' - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:8:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:32:19 - prefer_const_constructors
+   info - Don't use 'BuildContext's across async gaps - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:113:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:125:30 - use_build_context_synchronously
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:167:52 - invalid_null_aware_operator
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:174:47 - invalid_null_aware_operator
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:175:47 - invalid_null_aware_operator
+   info - Don't use 'BuildContext's across async gaps - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:201:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - tucpb_adm\lib\src\features\admin\presentation\cadastro\cadastro_excel_import.dart:206:28 - use_build_context_synchronously
+   info - The imported package 'uuid' isn't a dependency of the importing package - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:3:8 - depend_on_referenced_packages
+   info - Function literals shouldn't be passed to 'forEach' - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:86:28 - avoid_function_literals_in_foreach_calls
+   info - Function literals shouldn't be passed to 'forEach' - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:87:29 - avoid_function_literals_in_foreach_calls
+   info - Function literals shouldn't be passed to 'forEach' - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:88:29 - avoid_function_literals_in_foreach_calls
+   info - Function literals shouldn't be passed to 'forEach' - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:99:16 - avoid_function_literals_in_foreach_calls
+   info - Function literals shouldn't be passed to 'forEach' - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_controller.dart:100:15 - avoid_function_literals_in_foreach_calls
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastro\novo_cadastro_modal.dart:79:64 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_entidades.dart:45:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_entidades.dart:64:34 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_espiritual.dart:129:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_espiritual_v2.dart:129:21 - deprecated_member_use
+warning - Unused import: 'package:google_fonts/google_fonts.dart' - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_historico.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_imagem.dart:53:59 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_perfil.dart:112:45 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_perfil.dart:114:70 - unnecessary_non_null_assertion
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_perfil.dart:120:25 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\cadastro\tabs\aba_pessoal_v2.dart:101:17 - deprecated_member_use
+warning - Unused import: 'package:tucpb_adm/src/features/admin/presentation/widgets/novo_cadastro_dialog.dart' - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:8:8 - unused_import
+warning - The declaration '_abrirNovoCadastro' isn't referenced - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:36:8 - unused_element
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:136:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:136:64 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:171:77 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:218:61 - deprecated_member_use
+   info - 'MaterialStateProperty' is deprecated and shouldn't be used. Use WidgetStateProperty instead. Moved to the Widgets layer to make code available outside of Material. This feature was deprecated after v3.19.0-0.3.pre - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:295:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:295:78 - deprecated_member_use
+warning - The value of the local variable 'nomeCompId' isn't used - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:312:38 - unused_local_variable
+   info - Use 'const' for final variables initialized to a constant value - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:324:25 - prefer_const_declarations
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:352:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\cadastros_screen.dart:352:94 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:65:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:65:62 - prefer_const_constructors
+   info - The local variable '_getEventos' starts with an underscore - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:145:25 - no_leading_underscores_for_local_identifiers
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:189:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:200:68 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:201:31 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:202:29 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:248:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:386:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\calendario_screen.dart:484:62 - deprecated_member_use
+   info - Use a 'SizedBox' to add whitespace to a layout - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:49:14 - sized_box_for_whitespace
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:57:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:136:18 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:137:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:139:22 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:141:27 - prefer_const_literals_to_create_immutables
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\calendario\gira_detalhes_modal.dart:174:71 - deprecated_member_use
+   info - The private field _mediumsSelected could be 'final' - tucpb_adm\lib\src\features\admin\presentation\calendario\nova_gira_modal.dart:36:21 - prefer_final_fields
+   info - The private field _entitiesSelected could be 'final' - tucpb_adm\lib\src\features\admin\presentation\calendario\nova_gira_modal.dart:37:21 - prefer_final_fields
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\calendario\nova_gira_modal.dart:525:37 - prefer_const_constructors
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - tucpb_adm\lib\src\features\admin\presentation\calendario\nova_gira_modal.dart:583:15 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - tucpb_adm\lib\src\features\admin\presentation\calendario\nova_gira_modal.dart:593:15 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:55:28 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:57:33 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:58:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:60:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:64:26 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:65:31 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\dashboard_screen.dart:362:39 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_excel_import.dart:29:19 - prefer_const_constructors
+   info - Use 'const' for final variables initialized to a constant value - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_excel_import.dart:107:5 - prefer_const_declarations
+   info - Don't use 'BuildContext's across async gaps - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_excel_import.dart:141:7 - use_build_context_synchronously
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:70:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:71:36 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:127:25 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:129:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:130:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:131:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\estoque_screen.dart:132:17 - prefer_const_constructors
+warning - Unused import: 'package:tucpb_adm/src/shared/theme/admin_theme.dart' - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_categoria_estoque.dart:7:8 - unused_import
+warning - The value of the local variable 'itensManual' isn't used - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:32:11 - unused_local_variable
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:130:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:140:21 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:278:49 - deprecated_member_use
+   info - The variable name 'item_nome_com_categoria' isn't a lowerCamelCase identifier - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:289:14 - non_constant_identifier_names
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_checklist_estoque.dart:319:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_importacao_estoque.dart:319:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_importacao_estoque.dart:386:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\estoque\tabs\aba_importacao_estoque.dart:456:46 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\financeiro\financeiro_screen.dart:97:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_asaas.dart:63:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_asaas.dart:63:67 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_avulsos.dart:131:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_avulsos.dart:162:43 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_avulsos.dart:424:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_avulsos.dart:454:21 - deprecated_member_use
+   info - 'stream' is deprecated and shouldn't be used. .stream will be removed in 3.0.0. As a replacement, either listen to the provider itself (AsyncValue) or .future - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_geral_financeiro.dart:14:44 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_geral_financeiro.dart:151:37 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\financeiro\tabs\aba_pagamentos.dart:203:36 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - tucpb_adm\lib\src\features\admin\presentation\lembretes_screen.dart:201:47 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:134:22 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:135:14 - curly_braces_in_flow_control_structures
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:218:31 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:233:31 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:353:25 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\news\news_form_screen.dart:416:50 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\news\news_screen.dart:23:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\movimentacao_screen.dart:25:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\movimentacao_screen.dart:26:24 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\relatorios\movimentacao_screen.dart:67:34 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:92:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:93:32 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:176:75 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:230:17 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:231:29 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:232:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:232:37 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:234:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:234:37 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:283:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:291:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\relatorios\relatorios_screen.dart:326:35 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\shop\shop_screen.dart:41:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\shop\shop_screen.dart:42:32 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\shop\shop_screen.dart:82:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\shop\shop_screen.dart:160:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\shop\shop_screen.dart:169:65 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:252:32 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:253:22 - curly_braces_in_flow_control_structures
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:494:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:496:22 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:497:27 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:498:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:505:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:507:22 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - tucpb_adm\lib\src\features\admin\presentation\widgets\admin_scaffold.dart:508:27 - prefer_const_literals_to_create_immutables
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - tucpb_adm\lib\src\features\admin\presentation\widgets\novo_cadastro_dialog.dart:101:23 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - tucpb_adm\lib\src\features\admin\presentation\widgets\novo_cadastro_dialog.dart:146:61 - deprecated_member_use
+warning - Unused import: 'package:font_awesome_flutter/font_awesome_flutter.dart' - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:3:8 - unused_import
+warning - Unused import: 'package:go_router/go_router.dart' - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:4:8 - unused_import
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:117:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:119:30 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:132:25 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:134:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:134:52 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:143:33 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:143:68 - prefer_const_constructors
+warning - The value of the local variable 'success' isn't used - tucpb_adm\lib\src\features\auth\presentation\login_screen.dart:185:11 - unused_local_variable
+warning - Unused import: 'dart:typed_data' - tucpb_adm\lib\src\shared\services\printer_service.dart:5:8 - unused_import
+   info - The constant name 'GIRA_THEME_MAPPING' isn't a lowerCamelCase identifier - tucpb_adm\lib\src\shared\utils\spiritual_utils.dart:2:33 - constant_identifier_names
+   info - The constant name 'LINE_GROUPS' isn't a lowerCamelCase identifier - tucpb_adm\lib\src\shared\utils\spiritual_utils.dart:13:33 - constant_identifier_names
+

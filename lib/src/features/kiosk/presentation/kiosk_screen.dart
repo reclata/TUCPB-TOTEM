@@ -524,7 +524,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
 
                 if (_selectedLine == null) {
                   // ETAPA 1: Mostrar seleção de linha baseada nas entidades disponíveis (já filtradas pelo provider)
-                  final lines = mediums
+                  var lines = mediums
                       .map((m) => m.entity.linha)
                       .where((l) => l.isNotEmpty)
                       .map((l) => normalizeSpiritualLine(l))
