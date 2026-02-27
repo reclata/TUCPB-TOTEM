@@ -2294,6 +2294,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          try {
           final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
           final allMediums = mediumsAsync.value ?? [];
 
@@ -2857,6 +2858,20 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
               ),
             ],
           );
+          } catch (e, stack) {
+            return AlertDialog(
+              title: const Text('Erro no Diálogo'),
+              content: SingleChildScrollView(
+                child: SelectableText('Ocorreu um erro ao renderizar este diálogo:\n\n$e\n\n$stack'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('FECHAR')
+                )
+              ],
+            );
+          }
         },
       ),
     );
