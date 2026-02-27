@@ -2283,7 +2283,7 @@ class _AdminDashboardState extends ConsumerState<_AdminDashboard> {
     const validStatuses = ['agendada', 'aberta', 'encerrada'];
     String selectedStatus = validStatuses.contains(gira.status) ? gira.status : 'agendada';
     DateTime selectedDate = gira.data ?? DateTime.now();
-    bool encerramentoAtivo = gira.encerramentoKioskAtivo ?? false;
+    bool encerramentoAtivo = gira.encerramentoKioskAtivo == true;
     bool initialized = false;
     Map<String, bool> mediumsSelected = {};
     Map<String, bool> entitiesSelected = {};

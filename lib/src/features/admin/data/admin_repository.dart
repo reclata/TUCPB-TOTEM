@@ -89,8 +89,8 @@ class AdminRepository {
               data['horarioInicio'] = (data['horarioInicio'] ?? data['horarioFim'] ?? '').toString();
               // Compatibilidade: 'horarioKiosk' pode não existir
               data['horarioKiosk'] = (data['horarioKiosk'] ?? '').toString();
-              // Compatibilidade: 'encerramentoKioskAtivo' pode não existir
-              data['encerramentoKioskAtivo'] = data['encerramentoKioskAtivo'] ?? false;
+              // Compatibilidade: 'encerramentoKioskAtivo' pode não existir ou vir como outro tipo
+              data['encerramentoKioskAtivo'] = data['encerramentoKioskAtivo'] == true;
               
               // Explicit type conversion for Lists (String only)
               final List rawMediums = (data['mediumsParticipantes'] ?? data['mediums_participantes'] ?? []) as List;
