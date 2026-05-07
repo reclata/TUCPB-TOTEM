@@ -231,8 +231,12 @@ class Ticket {
   final DateTime? dataHoraChamada;
   @TimestampConverter()
   final DateTime? dataHoraAtendida;
+  @TimestampConverter()
+  final DateTime? dataHoraNaoCompareceu;
   final int chamadaCount;
   final bool isRedistributed;
+  final bool chamadaAtual;
+  final String? panelId;
 
   const Ticket({
     required this.id,
@@ -248,8 +252,11 @@ class Ticket {
     required this.dataHoraEmissao,
     this.dataHoraChamada,
     this.dataHoraAtendida,
+    this.dataHoraNaoCompareceu,
     this.chamadaCount = 0,
     this.isRedistributed = false,
+    this.chamadaAtual = false,
+    this.panelId,
   });
 
 
@@ -281,4 +288,58 @@ class Usuario {
 
   factory Usuario.fromJson(Map<String, dynamic> json) => _$UsuarioFromJson(json);
   Map<String, dynamic> toJson() => _$UsuarioToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class TvPanelSenhaAtual {
+  final String senhaId;
+  final String codigoSenha;
+  final String entidadeNome;
+  final String mediumNome;
+  final String giraNome;
+  @TimestampConverter()
+  final DateTime dataHoraChamada;
+  final int chamadaCount;
+
+  const TvPanelSenhaAtual({
+    required this.senhaId,
+    required this.codigoSenha,
+    required this.entidadeNome,
+    required this.mediumNome,
+    required this.giraNome,
+    required this.dataHoraChamada,
+    required this.chamadaCount,
+  });
+
+  factory TvPanelSenhaAtual.fromJson(Map<String, dynamic> json) => _$TvPanelSenhaAtualFromJson(json);
+  Map<String, dynamic> toJson() => _$TvPanelSenhaAtualToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class TvPanel {
+  final String id;
+  final String terreiroId;
+  final String nomePainel;
+  final String status; // 'ativo', 'inativo'
+  final String modo; // 'geral', 'por_entidade'
+  final String? entidadeId;
+  final String giraId;
+  @TimestampConverter()
+  final DateTime ultimaAtualizacao;
+  final TvPanelSenhaAtual? senhaAtual;
+
+  const TvPanel({
+    required this.id,
+    required this.terreiroId,
+    required this.nomePainel,
+    this.status = 'ativo',
+    this.modo = 'geral',
+    this.entidadeId,
+    required this.giraId,
+    required this.ultimaAtualizacao,
+    this.senhaAtual,
+  });
+
+  factory TvPanel.fromJson(Map<String, dynamic> json) => _$TvPanelFromJson(json);
+  Map<String, dynamic> toJson() => _$TvPanelToJson(this);
 }

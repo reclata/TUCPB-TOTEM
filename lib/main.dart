@@ -106,11 +106,11 @@ final _router = GoRouter(
       },
     ),
     GoRoute(
-      path: '/tv/:terreiroId',
+      path: '/tv/:panelId',
       pageBuilder: (context, state) {
         _setTitle('TUCPB_SENHAS');
         return NoTransitionPage(
-          child: TvScreen(terreiroId: state.pathParameters['terreiroId']!),
+          child: TvScreen(panelId: state.pathParameters['panelId']!),
         );
       },
     ),

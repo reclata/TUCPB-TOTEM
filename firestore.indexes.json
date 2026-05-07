@@ -56,11 +56,37 @@
         },
         {
             "collectionGroup": "tickets",
-            "queryScope": "COLLECTION_GROUP",
+            "queryScope": "COLLECTION",
             "fields": [
                 {
-                    "fieldPath": "dataEmissao",
+                    "fieldPath": "terreiroId",
                     "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "dataHoraChamada",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "tickets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "panelId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "dataHoraChamada",
+                    "order": "DESCENDING"
                 }
             ]
         }

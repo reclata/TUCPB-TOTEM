@@ -157,8 +157,14 @@ Ticket _$TicketFromJson(Map<String, dynamic> json) => Ticket(
     json['dataHoraAtendida'],
     const TimestampConverter().fromJson,
   ),
+  dataHoraNaoCompareceu: _$JsonConverterFromJson<Object, DateTime>(
+    json['dataHoraNaoCompareceu'],
+    const TimestampConverter().fromJson,
+  ),
   chamadaCount: (json['chamadaCount'] as num?)?.toInt() ?? 0,
   isRedistributed: json['isRedistributed'] as bool? ?? false,
+  chamadaAtual: json['chamadaAtual'] as bool? ?? false,
+  panelId: json['panelId'] as String?,
 );
 
 Map<String, dynamic> _$TicketToJson(Ticket instance) => <String, dynamic>{
@@ -183,8 +189,14 @@ Map<String, dynamic> _$TicketToJson(Ticket instance) => <String, dynamic>{
     instance.dataHoraAtendida,
     const TimestampConverter().toJson,
   ),
+  'dataHoraNaoCompareceu': _$JsonConverterToJson<Object, DateTime>(
+    instance.dataHoraNaoCompareceu,
+    const TimestampConverter().toJson,
+  ),
   'chamadaCount': instance.chamadaCount,
   'isRedistributed': instance.isRedistributed,
+  'chamadaAtual': instance.chamadaAtual,
+  'panelId': instance.panelId,
 };
 
 Value? _$JsonConverterFromJson<Json, Value>(
@@ -221,4 +233,60 @@ Map<String, dynamic> _$UsuarioToJson(Usuario instance) => <String, dynamic>{
   'perfilAcesso': instance.perfilAcesso,
   'permissoes': instance.permissoes,
   'ativo': instance.ativo,
+};
+
+TvPanelSenhaAtual _$TvPanelSenhaAtualFromJson(Map<String, dynamic> json) =>
+    TvPanelSenhaAtual(
+      senhaId: json['senhaId'] as String,
+      codigoSenha: json['codigoSenha'] as String,
+      entidadeNome: json['entidadeNome'] as String,
+      mediumNome: json['mediumNome'] as String,
+      giraNome: json['giraNome'] as String,
+      dataHoraChamada: const TimestampConverter().fromJson(
+        json['dataHoraChamada'] as Object,
+      ),
+      chamadaCount: (json['chamadaCount'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$TvPanelSenhaAtualToJson(TvPanelSenhaAtual instance) =>
+    <String, dynamic>{
+      'senhaId': instance.senhaId,
+      'codigoSenha': instance.codigoSenha,
+      'entidadeNome': instance.entidadeNome,
+      'mediumNome': instance.mediumNome,
+      'giraNome': instance.giraNome,
+      'dataHoraChamada': const TimestampConverter().toJson(
+        instance.dataHoraChamada,
+      ),
+      'chamadaCount': instance.chamadaCount,
+    };
+
+TvPanel _$TvPanelFromJson(Map<String, dynamic> json) => TvPanel(
+  id: json['id'] as String,
+  terreiroId: json['terreiroId'] as String,
+  nomePainel: json['nomePainel'] as String,
+  status: json['status'] as String? ?? 'ativo',
+  modo: json['modo'] as String? ?? 'geral',
+  entidadeId: json['entidadeId'] as String?,
+  giraId: json['giraId'] as String,
+  ultimaAtualizacao: const TimestampConverter().fromJson(
+    json['ultimaAtualizacao'] as Object,
+  ),
+  senhaAtual: json['senhaAtual'] == null
+      ? null
+      : TvPanelSenhaAtual.fromJson(json['senhaAtual'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$TvPanelToJson(TvPanel instance) => <String, dynamic>{
+  'id': instance.id,
+  'terreiroId': instance.terreiroId,
+  'nomePainel': instance.nomePainel,
+  'status': instance.status,
+  'modo': instance.modo,
+  'entidadeId': instance.entidadeId,
+  'giraId': instance.giraId,
+  'ultimaAtualizacao': const TimestampConverter().toJson(
+    instance.ultimaAtualizacao,
+  ),
+  'senhaAtual': instance.senhaAtual?.toJson(),
 };

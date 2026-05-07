@@ -427,4 +427,241 @@ class AdminRepository {
     );
     await createGira(gira);
   }
+
+  // --- TV Panels Management ---
+  Future<void> addTvPanel(TvPanel panel) async {
+    await _firestore.collection('tvPanels').doc(panel.id).set(panel.toJson());
+  }
+
+  Future<void> updateTvPanel(TvPanel panel) async {
+    await _firestore.collection('tvPanels').doc(panel.id).update(panel.toJson());
+  }
+
+  Future<void> deleteTvPanel(String panelId) async {
+    await _firestore.collection('tvPanels').doc(panelId).delete();
+  }
+
+  Stream<List<TvPanel>> streamTvPanels(String terreiroId) {
+    return _firestore
+        .collection('tvPanels')
+        .where('terreiroId', isEqualTo: terreiroId)
+        .snapshots()
+        .map((snap) {
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        data['ultimaAtualizacao'] ??= Timestamp.now();
+        return TvPanel.fromJson(data);
+      }).toList();
+    });
+  }
+
+  // --- Calling Functions ---
+  Future<void> callPassword({
+    required Ticket ticket,
+    required String panelId,
+    required String entidadeNome,
+    required String mediumNome,
+    required String giraNome,
+  }) async {
+    // 1. Encontrar se há uma senha atualmente chamada na mesma entidade e desmarcá-la
+    final currentCalledSnap = await _firestore
+        .collection('tickets')
+        .where('terreiroId', isEqualTo: ticket.terreiroId)
+        .where('giraId', isEqualTo: ticket.giraId)
+        .where('entidadeId', isEqualTo: ticket.entidadeId)
+        .where('chamadaAtual', isEqualTo: true)
+        .get();
+
+    await _firestore.runTransaction((transaction) async {
+      // READS
+      final panelRef = _firestore.collection('tvPanels').doc(panelId);
+      final panelDoc = await transaction.get(panelRef);
+
+      // WRITES
+      for (var doc in currentCalledSnap.docs) {
+        transaction.update(doc.reference, {'chamadaAtual': false});
+      }
+
+      // 2. Atualizar a nova senha para chamada
+      final now = Timestamp.now();
+      final ticketRef = _firestore.collection('tickets').doc(ticket.id);
+      final currentCount = ticket.chamadaCount;
+
+      transaction.update(ticketRef, {
+        'status': 'chamada',
+        'chamadaAtual': true,
+        'chamadaCount': currentCount + 1,
+        'dataHoraChamada': now,
+        'panelId': panelId,
+      });
+
+      // 3. Atualizar o painel de TV
+      if (panelDoc.exists) {
+        final senhaAtualData = TvPanelSenhaAtual(
+          senhaId: ticket.id,
+          codigoSenha: ticket.codigoSenha,
+          entidadeNome: entidadeNome,
+          mediumNome: mediumNome,
+          giraNome: giraNome,
+          dataHoraChamada: now.toDate(),
+          chamadaCount: currentCount + 1,
+        );
+        transaction.update(panelRef, {
+          'senhaAtual': senhaAtualData.toJson(),
+          'ultimaAtualizacao': now,
+        });
+      } else {
+        // Create panel if it doesn't exist
+        final newPanel = TvPanel(
+          id: panelId,
+          terreiroId: ticket.terreiroId,
+          nomePainel: 'Painel TV',
+          giraId: ticket.giraId,
+          senhaAtual: TvPanelSenhaAtual(
+            senhaId: ticket.id,
+            codigoSenha: ticket.codigoSenha,
+            entidadeNome: entidadeNome,
+            mediumNome: mediumNome,
+            giraNome: giraNome,
+            dataHoraChamada: now.toDate(),
+            chamadaCount: currentCount + 1,
+          ),
+          ultimaAtualizacao: now.toDate(),
+        );
+        transaction.set(panelRef, newPanel.toJson());
+      }
+    });
+  }
+
+  Future<void> markAsNotShown({
+    required Ticket ticket,
+    required String panelId,
+  }) async {
+    // 1. Achar a maior ordemFila atual
+    final queueSnap = await _firestore
+        .collection('tickets')
+        .where('terreiroId', isEqualTo: ticket.terreiroId)
+        .where('giraId', isEqualTo: ticket.giraId)
+        .where('entidadeId', isEqualTo: ticket.entidadeId)
+        .get();
+
+    int nextOrdemFila = ticket.ordemFila;
+    if (queueSnap.docs.isNotEmpty) {
+      final allOrders = queueSnap.docs.map((d) => (d.data()['ordemFila'] as num?)?.toInt() ?? 0).toList();
+      if (allOrders.isNotEmpty) {
+        nextOrdemFila = allOrders.reduce((a, b) => a > b ? a : b) + 1;
+      }
+    }
+
+    await _firestore.runTransaction((transaction) async {
+      // READS
+      final panelRef = _firestore.collection('tvPanels').doc(panelId);
+      final panelDoc = await transaction.get(panelRef);
+
+      // WRITES
+      // 2. Atualizar a senha
+      final ticketRef = _firestore.collection('tickets').doc(ticket.id);
+      transaction.update(ticketRef, {
+        'status': 'nao_compareceu',
+        'chamadaAtual': false,
+        'ordemFila': nextOrdemFila,
+        'dataHoraNaoCompareceu': Timestamp.now(),
+      });
+
+      // 3. Limpar a TV se for a senha atual
+      if (panelDoc.exists) {
+        final panelData = panelDoc.data();
+        if (panelData != null && panelData['senhaAtual'] != null) {
+          if (panelData['senhaAtual']['senhaId'] == ticket.id) {
+            transaction.update(panelRef, {
+              'senhaAtual': FieldValue.delete(),
+              'ultimaAtualizacao': Timestamp.now(),
+            });
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> markAsAttended({
+    required Ticket ticket,
+    required String panelId,
+  }) async {
+    await _firestore.runTransaction((transaction) async {
+      // READS
+      final panelRef = _firestore.collection('tvPanels').doc(panelId);
+      final panelDoc = await transaction.get(panelRef);
+
+      // WRITES
+      final ticketRef = _firestore.collection('tickets').doc(ticket.id);
+      transaction.update(ticketRef, {
+        'status': 'atendida',
+        'chamadaAtual': false,
+        'dataHoraAtendida': Timestamp.now(),
+      });
+
+      if (panelDoc.exists) {
+        final panelData = panelDoc.data();
+        if (panelData != null && panelData['senhaAtual'] != null) {
+          if (panelData['senhaAtual']['senhaId'] == ticket.id) {
+            transaction.update(panelRef, {
+              'senhaAtual': FieldValue.delete(),
+              'ultimaAtualizacao': Timestamp.now(),
+            });
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> recallPassword({
+    required Ticket ticket,
+    required String panelId,
+    required String entidadeNome,
+    required String mediumNome,
+    required String giraNome,
+  }) async {
+    await _firestore.runTransaction((transaction) async {
+      // READS
+      final panelRef = _firestore.collection('tvPanels').doc(panelId);
+      final panelDoc = await transaction.get(panelRef);
+
+      // WRITES
+      final ticketRef = _firestore.collection('tickets').doc(ticket.id);
+      final currentCount = ticket.chamadaCount;
+      final now = Timestamp.now();
+      
+      transaction.update(ticketRef, {
+        'chamadaCount': currentCount + 1,
+        'dataHoraChamada': now,
+      });
+      final senhaAtualData = TvPanelSenhaAtual(
+        senhaId: ticket.id,
+        codigoSenha: ticket.codigoSenha,
+        entidadeNome: entidadeNome,
+        mediumNome: mediumNome,
+        giraNome: giraNome,
+        dataHoraChamada: now.toDate(),
+        chamadaCount: currentCount + 1,
+      );
+
+      if (panelDoc.exists) {
+        transaction.update(panelRef, {
+          'senhaAtual': senhaAtualData.toJson(),
+          'ultimaAtualizacao': now,
+        });
+      } else {
+        final newPanel = TvPanel(
+          id: panelId,
+          terreiroId: ticket.terreiroId,
+          nomePainel: 'Painel TV',
+          giraId: ticket.giraId,
+          senhaAtual: senhaAtualData,
+          ultimaAtualizacao: now.toDate(),
+        );
+        transaction.set(panelRef, newPanel.toJson());
+      }
+    });
+  }
 }

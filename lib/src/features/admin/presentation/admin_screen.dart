@@ -126,15 +126,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 const SizedBox(height: 20),
                 
                 // Menu Items
-                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('dashboard') ?? false))
+                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('dashboard') ?? false))
                   _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
-                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('cadastros') ?? false))
+                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('cadastros') ?? false))
                   _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
-                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('calendario') ?? false))
+                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('calendario') ?? false))
                   _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
-                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('senhas') ?? false))
+                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('senhas') ?? false))
                   _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
-                if (user?.perfilAcesso == 'admin' || (user?.permissoes.contains('usuarios') ?? false))
+                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('usuarios') ?? false))
                   _buildMenuItem(Icons.people_outline, 'Usuários', 4),
                 
                 const Spacer(),
@@ -144,7 +144,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 ListTile(
                   leading: const Icon(Icons.tv, color: Colors.white70, size: 20),
                   title: Text('Painel TV', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-                  onTap: () => context.push('/tv/demo-terreiro'),
+                  onTap: () => context.push('/tv/tv-painel-1'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.monitor, color: Colors.white70, size: 20),

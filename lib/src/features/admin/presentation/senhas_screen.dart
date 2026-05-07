@@ -8,6 +8,33 @@ import 'package:terreiro_queue_system/src/features/admin/data/admin_repository.d
 import 'package:terreiro_queue_system/src/features/queue/data/firestore_queue_repository.dart';
 
 // =============================================================================
+// HELPER: Sort Mediums by Priority (Sandra, Eduardo, Robson, Jucineide, then alphabetical)
+// =============================================================================
+void _sortMediumsByPriority(List<Medium> mediums) {
+  final priorityNames = ['sandra', 'eduardo', 'robson', 'jucineide'];
+  mediums.sort((a, b) {
+    final aName = a.nome.toLowerCase().trim();
+    final bName = b.nome.toLowerCase().trim();
+    
+    final aIndex = priorityNames.indexWhere((p) => aName.startsWith(p));
+    final bIndex = priorityNames.indexWhere((p) => bName.startsWith(p));
+    
+    final aHasPriority = aIndex != -1;
+    final bHasPriority = bIndex != -1;
+    
+    if (aHasPriority && bHasPriority) {
+      return aIndex.compareTo(bIndex);
+    } else if (aHasPriority) {
+      return -1;
+    } else if (bHasPriority) {
+      return 1;
+    } else {
+      return aName.compareTo(bName);
+    }
+  });
+}
+
+// =============================================================================
 // Provider: streams ALL active tickets for a Gira (not just one entity)
 // =============================================================================
 final allTicketsForGiraProvider =
@@ -94,6 +121,7 @@ class _VisaoGeralTab extends ConsumerWidget {
         return mediumsAsync.when(
           data: (mediums) {
             final presentMediums = mediums.where((m) => m.ativo && (gira.presencas[m.id] ?? false)).toList();
+            _sortMediumsByPriority(presentMediums);
             
             if (presentMediums.isEmpty) {
               return const Center(child: Text("Nenhum médium presente."));
@@ -103,16 +131,27 @@ class _VisaoGeralTab extends ConsumerWidget {
 
             return allTicketsAsync.when(
               data: (allTickets) {
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: presentMediums.length,
-                  itemBuilder: (context, index) {
-                    final medium = presentMediums[index];
-                    // Filtrar tickets deste médium
-                    final mediumTickets = allTickets.where((t) => t.mediumId == medium.id).toList();
-                    final maxFichas = medium.maxFichas > 0 ? medium.maxFichas : 10;
-                    
-                    return Card(
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double itemWidth = 400;
+                    final int crossAxisCount = (constraints.maxWidth / itemWidth).floor().clamp(1, 4);
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount > 1 ? 2 : 1, // Fixado em 2 ou 1 dependendo da tela
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        mainAxisExtent: 180, // Altura fixa do card
+                      ),
+                      itemCount: presentMediums.length,
+                      itemBuilder: (context, index) {
+                        final medium = presentMediums[index];
+                        // Filtrar tickets deste médium
+                        final mediumTickets = allTickets.where((t) => t.mediumId == medium.id).toList();
+                        final maxFichas = medium.maxFichas > 0 ? medium.maxFichas : 10;
+                        
+                        return Card(
                       margin: const EdgeInsets.only(bottom: 16),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -171,18 +210,30 @@ class _VisaoGeralTab extends ConsumerWidget {
                                   }
                                 }
 
-                                return Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: bgColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: border,
-                                  ),
-                                  child: Center(
-                                    child: icon != null 
-                                      ? Icon(icon, size: 20, color: textColor)
-                                      : Text('$fichaNum', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                return InkWell(
+                                  onTap: (ticket != null && ticket.status == 'emitida') ? () {
+                                    ref.read(adminRepositoryProvider).callPassword(
+                                      ticket: ticket,
+                                      panelId: 'tv-painel-1',
+                                      entidadeNome: getEntityOfDay(gira, medium).entidadeNome,
+                                      mediumNome: medium.nome,
+                                      giraNome: gira.tema,
+                                    );
+                                  } : null,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: bgColor,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: border,
+                                    ),
+                                    child: Center(
+                                      child: icon != null 
+                                        ? Icon(icon, size: 20, color: textColor)
+                                        : Text('$fichaNum', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                    ),
                                   ),
                                 );
                               }),
@@ -194,6 +245,8 @@ class _VisaoGeralTab extends ConsumerWidget {
                   },
                 );
               },
+            );
+          },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, s) => Text("Erro ao carregar tickets: $e"),
             );
@@ -268,6 +321,7 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
             final presentMediums = mediums.where((m) {
               return m.ativo && (gira.presencas[m.id] ?? false);
             }).toList();
+            _sortMediumsByPriority(presentMediums);
 
             if (presentMediums.isEmpty) {
               return Center(
@@ -518,11 +572,15 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
                                                     onPressed: hasQueue
                                                         ? () {
                                                             // Chamar próxima
-                                                            ref
-                                                                .read(
-                                                                    queueRepositoryProvider)
-                                                                .callTicket(naFila
-                                                                    .first.id);
+                                                            final adminRepo = ref.read(adminRepositoryProvider);
+                                                            final nextTicket = naFila.first;
+                                                            adminRepo.callPassword(
+                                                              ticket: nextTicket,
+                                                              panelId: 'tv-painel-1',
+                                                              entidadeNome: entidadeDisplay,
+                                                              mediumNome: medium.nome,
+                                                              giraNome: gira.tema,
+                                                            );
                                                           }
                                                         : null,
                                                     style: ElevatedButton
@@ -574,11 +632,11 @@ class _ChamarSenhaTabState extends ConsumerState<_ChamarSenhaTab> {
 // =============================================================================
 // PAINEL DA FILA DO MÉDIUM (lado direito)
 // =============================================================================
-class _MediumQueuePanel extends ConsumerWidget {
+class _MediumQueuePanel extends ConsumerStatefulWidget {
   final String giraId;
   final String mediumId;
   final String terreiroId;
-  final VoidCallback? onBack; // Callback opcional para voltar
+  final VoidCallback? onBack;
 
   const _MediumQueuePanel({
     required this.giraId,
@@ -588,15 +646,22 @@ class _MediumQueuePanel extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mediumsAsync = ref.watch(mediumListProvider(terreiroId));
-    final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
-    final allTicketsAsync = ref.watch(allTicketsForGiraProvider(giraId));
+  ConsumerState<_MediumQueuePanel> createState() => _MediumQueuePanelState();
+}
+
+class _MediumQueuePanelState extends ConsumerState<_MediumQueuePanel> {
+  String _selectedPanelId = 'tv-painel-1';
+
+  @override
+  Widget build(BuildContext context) {
+    final mediumsAsync = ref.watch(mediumListProvider(widget.terreiroId));
+    final activeGiraAsync = ref.watch(activeGiraProvider(widget.terreiroId));
+    final allTicketsAsync = ref.watch(allTicketsForGiraProvider(widget.giraId));
 
     return mediumsAsync.when(
       data: (mediums) {
         final medium = mediums.firstWhere(
-          (m) => m.id == mediumId,
+          (m) => m.id == widget.mediumId,
           orElse: () => Medium(
               id: '', terreiroId: '', nome: 'Desconhecido', ativo: false),
         );
@@ -605,7 +670,7 @@ class _MediumQueuePanel extends ConsumerWidget {
           data: (allTickets) {
             // Filtrar tickets deste médium
             final mediumTickets =
-                allTickets.where((t) => t.mediumId == mediumId).toList();
+                allTickets.where((t) => t.mediumId == widget.mediumId).toList();
             mediumTickets.sort((Ticket a, Ticket b) => a.ordemFila.compareTo(b.ordemFila));
 
             // Separar: chamada atual VS fila de espera
@@ -630,10 +695,10 @@ class _MediumQueuePanel extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        if (onBack != null) ...[
+                        if (widget.onBack != null) ...[
                           IconButton(
                             icon: const Icon(Icons.arrow_back),
-                            onPressed: onBack,
+                            onPressed: widget.onBack,
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -686,6 +751,27 @@ class _MediumQueuePanel extends ConsumerWidget {
                                 ],
                               ),
                             ],
+                          ),
+                        ),
+                        // Dropdown Panel Selector
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.brown[200]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedPanelId,
+                              icon: const Icon(Icons.tv, color: Colors.brown),
+                              items: const [
+                                DropdownMenuItem(value: 'tv-painel-1', child: Text('Painel TV 1')),
+                                DropdownMenuItem(value: 'tv-painel-2', child: Text('Painel TV 2')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedPanelId = val);
+                              },
+                            ),
                           ),
                         ),
                       ],
@@ -746,9 +832,13 @@ class _MediumQueuePanel extends ConsumerWidget {
                                 label: Text(
                                     'RECHAMAR (${chamadaAtual.first.chamadaCount}x)'),
                                 onPressed: () {
-                                  ref
-                                      .read(queueRepositoryProvider)
-                                      .callTicket(chamadaAtual.first.id);
+                                  ref.read(adminRepositoryProvider).recallPassword(
+                                    ticket: chamadaAtual.first,
+                                    panelId: _selectedPanelId,
+                                    entidadeNome: getEntityOfDay(activeGiraAsync.value!, medium).entidadeNome,
+                                    mediumNome: medium.nome,
+                                    giraNome: activeGiraAsync.value!.tema,
+                                  );
                                 },
                               ),
                               const SizedBox(width: 12),
@@ -763,9 +853,10 @@ class _MediumQueuePanel extends ConsumerWidget {
                                 icon: const Icon(Icons.check_circle),
                                 label: const Text('CONFIRMAR ATENDIMENTO'),
                                 onPressed: () {
-                                  ref
-                                      .read(queueRepositoryProvider)
-                                      .markAttended(chamadaAtual.first.id);
+                                  ref.read(adminRepositoryProvider).markAsAttended(
+                                    ticket: chamadaAtual.first,
+                                    panelId: _selectedPanelId,
+                                  );
                                 },
                               ),
                               const SizedBox(width: 16),
@@ -780,11 +871,10 @@ class _MediumQueuePanel extends ConsumerWidget {
                                 icon: const Icon(Icons.person_off),
                                 label: const Text('NÃO COMPARECEU (FIM DA FILA)'),
                                 onPressed: () {
-                                  ref
-                                      .read(queueRepositoryProvider)
-                                      .markAbsentAndRequeue(
-                                          chamadaAtual.first.id,
-                                          chamadaAtual.first.entidadeId);
+                                  ref.read(adminRepositoryProvider).markAsNotShown(
+                                    ticket: chamadaAtual.first,
+                                    panelId: _selectedPanelId,
+                                  );
                                 },
                               ),
                             ],
@@ -813,9 +903,13 @@ class _MediumQueuePanel extends ConsumerWidget {
                           label: Text(
                               'CHAMAR PRÓXIMA: ${filaEspera.first.codigoSenha}'),
                           onPressed: () {
-                            ref
-                                .read(queueRepositoryProvider)
-                                .callTicket(filaEspera.first.id);
+                            ref.read(adminRepositoryProvider).callPassword(
+                              ticket: filaEspera.first,
+                              panelId: _selectedPanelId,
+                              entidadeNome: getEntityOfDay(activeGiraAsync.value!, medium).entidadeNome,
+                              mediumNome: medium.nome,
+                              giraNome: activeGiraAsync.value!.tema,
+                            );
                           },
                         ),
                       ),
@@ -893,9 +987,13 @@ class _MediumQueuePanel extends ConsumerWidget {
                                             foregroundColor: Colors.white,
                                           ),
                                           onPressed: () {
-                                            ref
-                                                .read(queueRepositoryProvider)
-                                                .callTicket(ticket.id);
+                                            ref.read(adminRepositoryProvider).callPassword(
+                                              ticket: ticket,
+                                              panelId: _selectedPanelId,
+                                              entidadeNome: getEntityOfDay(activeGiraAsync.value!, medium).entidadeNome,
+                                              mediumNome: medium.nome,
+                                              giraNome: activeGiraAsync.value!.tema,
+                                            );
                                           },
                                           child: const Text('CHAMAR'),
                                         )
@@ -981,6 +1079,7 @@ class _RedistribuirSenhasTabState
             final presentMediums = mediums.where((m) {
               return m.ativo && (gira.presencas[m.id] ?? false);
             }).toList();
+            _sortMediumsByPriority(presentMediums);
 
             return _RedistribuirContent(
               gira: gira,
