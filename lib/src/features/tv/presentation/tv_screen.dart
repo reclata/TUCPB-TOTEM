@@ -20,11 +20,38 @@ final tvPanelProvider = StreamProvider.family<TvPanel?, String>((ref, panelId) {
   });
 });
 
-// Provider to stream the history for this panel
-final tvHistoryProvider = StreamProvider.family<List<Ticket>, String>((ref, panelId) {
+// Provider para buscar a Gira ativa diretamente (Status: aberta)
+final activeGiraProvider = StreamProvider<Gira?>((ref) {
   return FirebaseFirestore.instance
+      .collection('giras')
+      .where('status', isEqualTo: 'aberta')
+      .limit(1)
+      .snapshots()
+      .map((snap) {
+        if (snap.docs.isEmpty) return null;
+        final data = snap.docs.first.data();
+        data['id'] = snap.docs.first.id;
+        return Gira.fromJson(data);
+      });
+});
+
+// Provider to stream the history for this panel, filtered by Gira
+final tvHistoryProvider = StreamProvider.family<List<Ticket>, String>((ref, arg) {
+  final parts = arg.split('_');
+  final panelId = parts[0];
+  final giraId = parts.length > 1 ? parts[1] : '';
+  
+  var query = FirebaseFirestore.instance
       .collection('tickets')
-      .where('panelId', isEqualTo: panelId)
+      .where('panelId', isEqualTo: panelId);
+      
+  if (giraId.isEmpty) {
+    return Stream.value([]); // Se não tem gira ativa, não mostra histórico
+  }
+  
+  query = query.where('giraId', isEqualTo: giraId);
+  
+  return query
       .where('status', whereIn: ['chamada', 'atendida', 'nao_compareceu'])
       .orderBy('dataHoraChamada', descending: true)
       .limit(6)
@@ -39,7 +66,13 @@ class TvScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final panelAsync = ref.watch(tvPanelProvider(panelId));
-    final historyAsync = ref.watch(tvHistoryProvider(panelId));
+    final activeGiraAsync = ref.watch(activeGiraProvider);
+    
+    // Pega o ID da Gira ativa diretamente (ignora o do painel que pode estar desatualizado)
+    final activeGira = activeGiraAsync.value;
+    final giraId = activeGira?.id ?? '';
+    
+    final historyAsync = ref.watch(tvHistoryProvider("${panelId}_$giraId"));
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -48,7 +81,7 @@ class TvScreen extends ConsumerWidget {
           if (panel == null) {
             return const Center(
               child: Text(
-                'PAINEL NÃƒO ENCONTRADO',
+                'PAINEL NÃO ENCONTRADO',
                 style: TextStyle(color: Colors.red, fontSize: 36),
               ),
             );
@@ -59,189 +92,96 @@ class TvScreen extends ConsumerWidget {
           return Column(
             children: [
               // Tarja Superior
-              const _TickerBanner(text: "FAÃ‡A SUA CONTRIBUIÃ‡ÃƒO - PIX: (11) 992584595", isBottom: false),
+              const _TickerBanner(text: "FAÇA SUA CONTRIBUIÇÃO - PIX: (11) 992584595", isBottom: false),
               
               Expanded(
-                child: Row(
-                  children: [
-                    // Painel principal â€” senha chamada
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                  color: Colors.brown[900],
-                  child: currentSenha == null
-                      ? const _IdleCarousel()
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Header: Terreiro / Gira
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 40),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'T.U.C.P.B.',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 24,
-                                      color: Colors.white54,
-                                      letterSpacing: 8,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    currentSenha.giraNome.toUpperCase(),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 32,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            
-                            // Label
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                              ),
-                              child: Text(
-                                'SENHA CHAMADA',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 36,
-                                  color: Colors.amber,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 6,
+                child: historyAsync.when(
+                  data: (history) {
+                    // Filtra o histórico para não mostrar a senha atual de novo se ela estiver no topo
+                    final filteredHistory = history.where((t) => currentSenha == null || t.id != currentSenha.senhaId).take(5).toList();
+                    
+                    final bool hasActiveGira = activeGira != null;
+                    final bool showSidebar = currentSenha != null;
+                    
+                    if (!hasActiveGira || !showSidebar) {
+                      // Se não tem gira ativa OU não tem nenhuma senha chamada AGORA, mostra o carrossel em TELA CHEIA
+                      return const _IdleCarousel();
+                    }
+                    
+                    // Se tem senhas, mostra a tela dividida
+                    return Row(
+                      children: [
+                        // Painel principal — senha chamada
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            color: Colors.brown[900],
+                            child: currentSenha == null
+                                ? const _IdleCarousel() // Fallback se tiver histórico mas nenhuma chamada agora
+                                : _buildCurrentSenhaPanel(currentSenha),
+                          ),
+                        ),
+
+                        // Sidebar — histórico
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            color: const Color(0xFF2E1C15),
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 24),
+                                ClipOval(
+                                  child: Image.asset('assets/images/logo.png', height: 120),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-
-                            // CÃ³digo da senha em destaque
-                            Text(
-                              currentSenha.codigoSenha,
-                              style: GoogleFonts.outfit(
-                                fontSize: 240,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                height: 1,
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-
-                            // Entidade e MÃ©dium
-                            Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    currentSenha.entidadeNome.toUpperCase(),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 48, 
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.amber, 
-                                      letterSpacing: 2
-                                    ),
+                                const SizedBox(height: 48),
+                                Text(
+                                  'ÚLTIMAS CHAMADAS',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white38,
+                                    letterSpacing: 3,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'MÃ‰DIUM: ${currentSenha.mediumNome.toUpperCase()}',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 28, 
-                                      color: Colors.white70,
-                                      letterSpacing: 2
-                                    ),
+                                ),
+                                const SizedBox(height: 32),
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: filteredHistory.length,
+                                    itemBuilder: (context, index) {
+                                      return _HistoryItem(ticket: filteredHistory[index]);
+                                    },
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'Aguarde sua senha ser chamada',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 18,
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                              ],
                             ),
-
-                            const SizedBox(height: 40),
-                            // Mensagem
-                            Text(
-                              'DIRIJA-SE AO ATENDIMENTO',
-                              style: GoogleFonts.outfit(
-                                fontSize: 32, 
-                                color: Colors.greenAccent,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 2
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                ),
-              ),
-
-              // Sidebar â€” histÃ³rico
-              Expanded(
-                flex: 1,
-                child: Container(
-                  color: const Color(0xFF2E1C15),
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 24),
-                      ClipOval(
-                        child: Image.asset('assets/images/logo.png', height: 120),
-                      ),
-                      const SizedBox(height: 48),
-                      Text(
-                        'ÃšLTIMAS CHAMADAS',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          color: Colors.white38,
-                          letterSpacing: 3,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Expanded(
-                        child: historyAsync.when(
-                          data: (history) {
-                            // Filtra o histÃ³rico para nÃ£o mostrar a senha atual de novo se ela estiver no topo
-                            final filteredHistory = history.where((t) => currentSenha == null || t.id != currentSenha.senhaId).take(5).toList();
-                            if (filteredHistory.isEmpty) {
-                              return Center(
-                                child: Text('Nenhum histÃ³rico', style: GoogleFonts.outfit(color: Colors.white24, fontSize: 18)),
-                              );
-                            }
-                            return ListView.builder(
-                              itemCount: filteredHistory.length,
-                              itemBuilder: (context, index) {
-                                return _HistoryItem(ticket: filteredHistory[index]);
-                              },
-                            );
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator(color: Colors.amber)),
-                          error: (_, __) => const Center(child: Text('Erro ao carregar histÃ³rico', style: TextStyle(color: Colors.red))),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Aguarde sua senha ser chamada',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          color: Colors.white24,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator(color: Colors.amber)),
+                  error: (e, s) {
+                    if (currentSenha == null) {
+                      return const _IdleCarousel();
+                    }
+                    return Container(
+                      color: Colors.brown[900],
+                      child: _buildCurrentSenhaPanel(currentSenha),
+                    );
+                  },
                 ),
               ),
               // Tarja Inferior
-              const _TickerBanner(text: "AXÃ‰", isBottom: true),
+              const _TickerBanner(text: "AXÉ", isBottom: true),
             ],
           );
         },
@@ -250,6 +190,116 @@ class TvScreen extends ConsumerWidget {
           child: Text('Erro: $e', style: const TextStyle(color: Colors.red, fontSize: 24)),
         ),
       ),
+    );
+  }
+
+  // Widget auxiliar para construir o painel da senha atual
+  Widget _buildCurrentSenhaPanel(TvPanelSenhaAtual currentSenha) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Header: Terreiro / Gira
+        Padding(
+          padding: const EdgeInsets.only(bottom: 40),
+          child: Column(
+            children: [
+              Text(
+                'T.U.C.P.B.',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  color: Colors.white54,
+                  letterSpacing: 8,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currentSenha.giraNome.toUpperCase(),
+                style: GoogleFonts.outfit(
+                  fontSize: 32,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Label
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.amber.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          ),
+          child: Text(
+            'SENHA CHAMADA',
+            style: GoogleFonts.outfit(
+              fontSize: 36,
+              color: Colors.amber,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 40),
+
+        // Código da senha em destaque
+        Text(
+          currentSenha.codigoSenha,
+          style: GoogleFonts.outfit(
+            fontSize: 240,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 40),
+
+        // Entidade e Médium
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.black12,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            children: [
+              Text(
+                currentSenha.entidadeNome.toUpperCase(),
+                style: GoogleFonts.outfit(
+                  fontSize: 48, 
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber, 
+                  letterSpacing: 2
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'MÉDIUM: ${currentSenha.mediumNome.toUpperCase()}',
+                style: GoogleFonts.outfit(
+                  fontSize: 28, 
+                  color: Colors.white70,
+                  letterSpacing: 2
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 40),
+        // Mensagem
+        Text(
+          'DIRIJA-SE AO ATENDIMENTO',
+          style: GoogleFonts.outfit(
+            fontSize: 32, 
+            color: Colors.greenAccent,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 2
+          ),
+        ),
+      ],
     );
   }
 }
@@ -291,10 +341,6 @@ class _HistoryItem extends StatelessWidget {
   }
 }
 
-
-// =============================================================================
-// TICKER BANNER (Tarja que se movimenta)
-// =============================================================================
 class _TickerBanner extends StatefulWidget {
   final String text;
   final bool isBottom;
@@ -318,7 +364,6 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
   void didChangeDependencies() {
     super.didChangeDependencies();
     
-    // Measure the width of one block of text
     final textSpan = TextSpan(
       text: '${widget.text}   ✦   ',
       style: GoogleFonts.outfit(
@@ -335,7 +380,6 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
     textPainter.layout();
     _textWidth = textPainter.width;
 
-    // Set duration based on width so speed is constant (e.g. 100 pixels per second)
     if (_textWidth > 0) {
       _controller.duration = Duration(milliseconds: (_textWidth / 100 * 1000).toInt());
       _controller.repeat();
@@ -351,7 +395,6 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Repeat enough times to cover screen width plus extra for the loop
     final int repeatCount = _textWidth > 0 ? (screenWidth / _textWidth).ceil() + 3 : 10;
     final fullText = List.generate(repeatCount, (_) => '${widget.text}   ✦   ').join('');
 
@@ -388,9 +431,6 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
   }
 }
 
-// =============================================================================
-// IDLE CAROUSEL (Mensagens quando vazio)
-// =============================================================================
 class _IdleCarousel extends StatefulWidget {
   const _IdleCarousel();
   @override
@@ -401,19 +441,21 @@ class _IdleCarouselState extends State<_IdleCarousel> {
   int _currentIndex = 0;
   late Timer _timer;
 
-  final List<String> _messages = [
-    "BEM-VINDOS AO T.U.C.P.B.\nSinta-se em casa!",
-    "PONTOS DA GIRA\nAguarde o início dos trabalhos e prepare sua vibração.",
-    "CURIOSIDADE\nA Umbanda é paz, amor e caridade.",
-    "MANTENHA O SILÊNCIO\nDesligue o celular e concentre-se nas preces.",
+  final List<String> _images = [
+    "assets/images/TUCPB 1.png",
+    "assets/images/TUCPB 2.png",
+    "assets/images/TUCPB 3.png",
+    "assets/images/TUCPB 4.png",
+    "assets/images/TUCPB 5.png",
+    "assets/images/TUCPB 6.png",
   ];
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 12), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (mounted) {
-        setState(() => _currentIndex = (_currentIndex + 1) % _messages.length);
+        setState(() => _currentIndex = (_currentIndex + 1) % _images.length);
       }
     });
   }
@@ -426,37 +468,22 @@ class _IdleCarouselState extends State<_IdleCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(60.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            "assets/images/logo.png", 
-            height: 250, 
-            color: Colors.white12, 
-            colorBlendMode: BlendMode.srcIn
-          ),
-          const SizedBox(height: 80),
-          AnimatedSwitcher(
-            duration: const Duration(seconds: 2),
-            switchInCurve: Curves.easeInOut,
-            switchOutCurve: Curves.easeInOut,
-            child: Text(
-              _messages[_currentIndex],
-              key: ValueKey(_currentIndex),
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 56,
-                fontWeight: FontWeight.bold,
-                color: Colors.amber[100],
-                height: 1.6,
-              ),
-            ),
-          ),
-        ],
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.brown[900],
+      child: AnimatedSwitcher(
+        duration: const Duration(seconds: 2),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: Image.asset(
+          _images[_currentIndex],
+          key: ValueKey(_currentIndex),
+          fit: BoxFit.contain,
+          width: double.infinity,
+          height: double.infinity,
+        ),
       ),
     );
   }
 }
-

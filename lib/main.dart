@@ -152,7 +152,8 @@ class GoRouterRefreshStream extends ChangeNotifier {
 }
 
 class TerreiroApp extends ConsumerWidget {
-  const TerreiroApp({super.key});
+  final RouterConfig<Object>? routerConfig;
+  const TerreiroApp({super.key, this.routerConfig});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -182,7 +183,7 @@ class TerreiroApp extends ConsumerWidget {
         ),
       ),
       themeMode: ThemeMode.light,
-      routerConfig: _router,
+      routerConfig: routerConfig ?? _router,
     );
   }
 }

@@ -89,6 +89,28 @@
                     "order": "DESCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "tickets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "panelId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "giraId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "dataHoraChamada",
+                    "order": "DESCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []

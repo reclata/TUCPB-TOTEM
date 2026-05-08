@@ -101,10 +101,8 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 }
 
                 // Prioridade 2: Seleção de Entidades (Fluxo interno)
-                // Funciona com gira real OU com fallback caso Firestore retorne null
-                if (_showEntitySelection) {
-                  final giraParaUsar = activeGira ?? _fallbackGira;
-                  return _buildOpenState(giraParaUsar);
+                if (_showEntitySelection && activeGira != null) {
+                  return _buildOpenState(activeGira);
                 }
 
                 // Prioridade 3: Tela Inicial (Bem-vindos) - SEMPRE VISÍVEL
@@ -229,13 +227,31 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
           ),
         ),
         const SizedBox(height: 60),
-        _AnimatedSenhaButton(
-          onTap: () {
-            setState(() {
-              _showEntitySelection = true;
-            });
-          },
-        ),
+        if (gira != null && _isKioskOpen(gira))
+          _AnimatedSenhaButton(
+            onTap: () {
+              setState(() {
+                _showEntitySelection = true;
+              });
+            },
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: const Text(
+              "NENHUMA GIRA ABERTA",
+              style: TextStyle(
+                fontFamily: "Roboto",
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.amber,
+              ),
+            ),
+          ),
       ],
     );
   }
