@@ -9,26 +9,16 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  print('--- CHECKING DATA ---');
+  print('--- LISTANDO MÉDIUNS NO BANCO ---');
   
   try {
-    final giras = await FirebaseFirestore.instance.collection('giras').get();
-    print('Giras found: ${giras.docs.length}');
-    for (final doc in giras.docs) {
-      print('- Gira: ${doc.id} | Status: ${doc.data()['status']}');
+    final snap = await FirebaseFirestore.instance.collection('mediums').get();
+    print('Total de médiuns encontrados: ${snap.docs.length}');
+    for (final doc in snap.docs) {
+      print('- ID: ${doc.id} | Nome: "${doc.data()['nome']}" | MaxFichas: ${doc.data()['maxFichas']}');
     }
   } catch (e) {
-    print('Error loading giras: $e');
-  }
-
-  try {
-    final tickets = await FirebaseFirestore.instance.collection('tickets').get();
-    print('Tickets found: ${tickets.docs.length}');
-    for (final doc in tickets.docs) {
-      print('- Ticket: ${doc.id} | Gira: ${doc.data()['giraId']}');
-    }
-  } catch (e) {
-    print('Error loading tickets: $e');
+    print('❌ Erro ao listar médiuns: $e');
   }
   
   print('---------------------');

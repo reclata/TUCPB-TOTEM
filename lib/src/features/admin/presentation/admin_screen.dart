@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -65,17 +66,20 @@ class AdminScreen extends ConsumerStatefulWidget {
 
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   int _selectedIndex = 0;
+  bool _isSidebarCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).value;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA), // Off-white
       body: Row(
         children: [
           // SIDEBAR
-          Container(
-            width: 250,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: _isSidebarCollapsed ? 60 : 250,
             decoration: BoxDecoration(
               color: Colors.brown[900],
               boxShadow: [
@@ -86,87 +90,105 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 )
               ],
             ),
-            child: Column(
-              children: [
-                // Logo & Title
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+            child: _isSidebarCollapsed
+                ? Column(
                     children: [
-                      ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          height: 80,
-                          width: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.temple_buddhist, size: 60, color: Colors.white),
+                      const SizedBox(height: 20),
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                        onPressed: () => setState(() => _isSidebarCollapsed = false),
+                      ),
+                      const Spacer(),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          icon: const Icon(Icons.chevron_left, color: Colors.white),
+                          onPressed: () => setState(() => _isSidebarCollapsed = true),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'T.U.C.P.B.',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      // Logo & Title
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            ClipOval(
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                height: 80,
+                                width: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.temple_buddhist, size: 60, color: Colors.white),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'T.U.C.P.B.',
+                              style: GoogleFonts.outfit(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Token System',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Token System',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
+                      const Divider(color: Colors.white24, height: 1),
+                      const SizedBox(height: 20),
+                      
+                      // Menu Items (Temporariamente liberados para todos os usuários)
+                      _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
+                      _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
+                      _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
+                      _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
+                      _buildMenuItem(Icons.people_outline, 'Usuários', 4),
+                      
+                      const Spacer(),
+                      
+                      // Quick Actions
+                      const Divider(color: Colors.white24, height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.tv, color: Colors.white70, size: 20),
+                        title: Text('Painel TV', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                        onTap: () => context.push('/tv/tv-painel-1'),
                       ),
+                      ListTile(
+                        leading: const Icon(Icons.monitor, color: Colors.white70, size: 20),
+                        title: Text('Totem', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                        onTap: () => context.push('/kiosk'),
+                      ),
+                      
+                      if (user?.perfilAcesso == 'admin')
+                        const Divider(color: Colors.white24, height: 1),
+                      if (user?.perfilAcesso == 'admin')
+                        _buildMenuItem(Icons.settings_outlined, 'Configurações', 5),
+                      if (user?.perfilAcesso == 'admin')
+                        _buildMenuItem(Icons.print_outlined, 'Sistema', 6),
+                      
+                      ListTile(
+                        leading: const Icon(Icons.logout, color: Colors.white70, size: 20),
+                        title: Text('Sair', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                        onTap: () async {
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) {
+                            context.go('/login');
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 20),
                     ],
                   ),
-                ),
-                const Divider(color: Colors.white24, height: 1),
-                const SizedBox(height: 20),
-                
-                // Menu Items
-                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('dashboard') ?? false))
-                  _buildMenuItem(Icons.dashboard_outlined, 'Dashboard', 0),
-                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('cadastros') ?? false))
-                  _buildMenuItem(Icons.folder_shared_outlined, 'Cadastros', 1),
-                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('calendario') ?? false))
-                  _buildMenuItem(Icons.calendar_month_outlined, 'Calendário', 2),
-                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('senhas') ?? false))
-                  _buildMenuItem(Icons.confirmation_number_outlined, 'Senhas', 3),
-                if (user == null || user?.perfilAcesso == 'admin' || (user?.permissoes.contains('usuarios') ?? false))
-                  _buildMenuItem(Icons.people_outline, 'Usuários', 4),
-                
-                const Spacer(),
-                
-                // Quick Actions
-                const Divider(color: Colors.white24, height: 1),
-                ListTile(
-                  leading: const Icon(Icons.tv, color: Colors.white70, size: 20),
-                  title: Text('Painel TV', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-                  onTap: () => context.push('/tv/tv-painel-1'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.monitor, color: Colors.white70, size: 20),
-                  title: Text('Totem', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-                  onTap: () => context.push('/kiosk'),
-                ),
-                
-                if (user?.perfilAcesso == 'admin')
-                  const Divider(color: Colors.white24, height: 1),
-                if (user?.perfilAcesso == 'admin')
-                  _buildMenuItem(Icons.settings_outlined, 'Configurações', 5),
-                if (user?.perfilAcesso == 'admin')
-                  _buildMenuItem(Icons.print_outlined, 'Sistema', 6),
-                
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.white70, size: 20),
-                  title: Text('Sair', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-                  onTap: () => context.go('/login'),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
           ),
           
           // MAIN CONTENT
@@ -281,7 +303,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             fontSize: 14,
           ),
         ),
-        onTap: () => setState(() => _selectedIndex = index),
+        onTap: () {
+          setState(() {
+            _selectedIndex = index;
+            final isMobileOrTablet = MediaQuery.of(context).size.width < 1100;
+            if (index == 3 && isMobileOrTablet) {
+              _isSidebarCollapsed = true;
+            }
+          });
+        },
       ),
     );
   }

@@ -29,7 +29,9 @@ final Map<String, IconData> _lineIcons = {
 final Map<String, String> _lineImages = {
   'CABOCLO': 'assets/images/linhas/caboclo.jpg',
   'ERE': 'assets/images/linhas/ere.jpg',
+  'ERES': 'assets/images/linhas/ere.jpg',
   'PRETO VELHO': 'assets/images/linhas/preto_velho.jpg',
+  'PRETA VELHA': 'assets/images/linhas/preto_velho.jpg',
   'BOIADEIRO': 'assets/images/linhas/boiadeiro.jpg',
   'MARINHEIRO': 'assets/images/linhas/marinheiro.jpg',
   'BAIANO': 'assets/images/linhas/baiano.jpg',
@@ -39,13 +41,10 @@ final Map<String, String> _lineImages = {
   'POMBA GIRA': 'assets/images/linhas/pombo_gira.jpg',
   'POMBO GIRA': 'assets/images/linhas/pombo_gira.jpg',
   'ESQUERDA': 'assets/images/linhas/exu.jpg',
+  'FEITICEIRO': 'assets/images/linhas/caboclo.jpg', // Fallback image
+
 };
 
-final Map<String, List<String>> _giraLineGroups = {
-  'Boiadeiro': ['Boiadeiro', 'Marinheiro', 'Malandro'],
-  'Esquerda': ['Esquerda'],
-  // Outras linhas são 1 para 1 por padrão
-};
 
 class KioskScreen extends ConsumerStatefulWidget {
   const KioskScreen({super.key});
@@ -62,6 +61,10 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
   Ticket? _lastIssuedTicket;
   String? _lastIssuedEntityName;
   Gira? _lastIssuedGira;
+
+  void updateState(VoidCallback fn) {
+    if (mounted) setState(fn);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -178,13 +181,16 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
   }
 
   Widget _buildLandingState(Gira? gira) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           "Bem-Vindos",
           style: TextStyle(fontFamily: "Roboto", 
-            fontSize: 80,
+            fontSize: isMobile ? 40 : 80,
             fontWeight: FontWeight.bold,
             color: Colors.white,
             shadows: [
@@ -192,10 +198,10 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 40),
+        SizedBox(height: isMobile ? 20 : 40),
         Container(
-          height: 450,
-          width: 450,
+          height: isMobile ? size.width * 0.6 : 450,
+          width: isMobile ? size.width * 0.6 : 450,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
@@ -226,7 +232,7 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 60),
+        SizedBox(height: isMobile ? 30 : 60),
         if (gira != null && _isKioskOpen(gira))
           _AnimatedSenhaButton(
             onTap: () {
@@ -234,19 +240,20 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
                 _showEntitySelection = true;
               });
             },
+            isMobile: isMobile,
           )
         else
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 40, vertical: isMobile ? 10 : 20),
             decoration: BoxDecoration(
               color: Colors.black54,
               borderRadius: BorderRadius.circular(30),
             ),
-            child: const Text(
+            child: Text(
               "NENHUMA GIRA ABERTA",
               style: TextStyle(
                 fontFamily: "Roboto",
-                fontSize: 32,
+                fontSize: isMobile ? 20 : 32,
                 fontWeight: FontWeight.bold,
                 color: Colors.amber,
               ),
@@ -259,7 +266,8 @@ class _KioskScreenState extends ConsumerState<KioskScreen> {
 
 class _AnimatedSenhaButton extends StatefulWidget {
   final VoidCallback onTap;
-  const _AnimatedSenhaButton({required this.onTap});
+  final bool isMobile;
+  const _AnimatedSenhaButton({required this.onTap, this.isMobile = false});
 
   @override
   State<_AnimatedSenhaButton> createState() => _AnimatedSenhaButtonState();
@@ -305,18 +313,21 @@ class _AnimatedSenhaButtonState extends State<_AnimatedSenhaButton> with SingleT
             disabledBackgroundColor: Colors.white.withOpacity(0.9),
             foregroundColor: Colors.black,
             disabledForegroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 30),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isMobile ? 50 : 100, 
+              vertical: widget.isMobile ? 15 : 30
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(50),
             ),
             elevation: 10,
             shadowColor: Colors.black54,
           ),
-          child: const Text(
+          child: Text(
             "Senha",
             style: TextStyle(
               fontFamily: "Roboto",
-              fontSize: 32,
+              fontSize: widget.isMobile ? 24 : 32,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -329,14 +340,7 @@ class _AnimatedSenhaButtonState extends State<_AnimatedSenhaButton> with SingleT
 // Extensão do _KioskScreenState para fechar o widget original e adicionar os novos métodos se necessário
 extension _KioskScreenStateUI on _KioskScreenState {
 
-  String _formatMediumName(String fullName) {
-    if (fullName.isEmpty) return fullName;
-    final parts = fullName.trim().split(' ');
-    if (parts.length > 1) {
-      return '${parts.first} ${parts.last}';
-    }
-    return fullName;
-  }
+
 
   Widget _buildReprintState(String terreiroId) {
     final ticketsAsync = ref.watch(ticketListProvider(terreiroId));
@@ -367,7 +371,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black, size: 40),
-                onPressed: () => setState(() => _showReprintScreen = false),
+                onPressed: () => updateState(() => _showReprintScreen = false),
               ),
               const SizedBox(width: 16),
               const Expanded(
@@ -416,7 +420,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                          terreiroName: "T.U.C.P.B.",
                          giraName: gira.tema,
                          entityName: resolvedEntityName,
-                         mediumName: _formatMediumName(medium.nome),
+                         mediumName: formatMediumName(medium.nome),
                          mediumInitials: mediumInitials,
                          ticketCode: ticket.codigoSenha,
                          pixKey: "12345678900",
@@ -439,7 +443,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                              children: [
                                Text('$resolvedEntityName', style: TextStyle(fontFamily: "Roboto", fontSize: 24, fontWeight: FontWeight.bold, color: Colors.brown[900])),
                                const SizedBox(height: 8),
-                               Text('Médium: ${_formatMediumName(medium.nome)}', style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.black87)),
+                               Text('Médium: ${formatMediumName(medium.nome)}', style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.black87)),
                                const SizedBox(height: 8),
                                Text('Emitida às: ${DateFormat('HH:mm').format(ticket.dataHoraEmissao)}', style: TextStyle(fontFamily: "Roboto", fontSize: 18, color: Colors.grey[700])),
                              ],
@@ -487,24 +491,26 @@ extension _KioskScreenStateUI on _KioskScreenState {
   Widget _buildOpenState(Gira gira) {
     final terreiroId = ref.watch(selectedTerreiroIdProvider) ?? 'demo-terreiro';
     final activeMediumsAsync = ref.watch(activeMediumsProvider(terreiroId));
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
 
     return Column(
       children: [
         // Top Bar con Botón Volver y Título
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 5 : 10),
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black, size: 30),
+                icon: Icon(Icons.arrow_back, color: Colors.black, size: isMobile ? 24 : 30),
                 onPressed: () {
                   if (_selectedLine != null) {
-                    setState(() {
+                    updateState(() {
                       _selectedLine = null;
                       _selectedTipo = null;
                     });
                   } else {
-                    setState(() => _showEntitySelection = false);
+                    updateState(() => _showEntitySelection = false);
                   }
                 },
               ),
@@ -516,7 +522,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                       : (_selectedTipo == null 
                           ? "Escolha a parte da Gira:" 
                           : "Escolha o guia:"),
-                  style: TextStyle(fontFamily: "Roboto", fontSize: 22, color: Colors.black, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 18 : 22, color: Colors.black, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -528,48 +534,53 @@ extension _KioskScreenStateUI on _KioskScreenState {
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 20, vertical: isMobile ? 10 : 20),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
                   child: Center(
                     child: activeMediumsAsync.when(
               data: (mediums) {
                 if (mediums.isEmpty) {
-                  return Center(child: Text("Nenhuma entidade disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
+                  return Center(child: Text("Nenhuma entidade disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 16 : 20, color: Colors.brown[900])));
                 }
 
                 if (_selectedLine == null) {
-                  // ETAPA 1: Mostrar seleção de linha baseada nas entidades disponíveis (já filtradas pelo provider)
-                  var lines = mediums
-                      .map((m) => m.entity.linha)
-                      .where((l) => l.isNotEmpty)
-                      .map((l) => normalizeSpiritualLine(l))
-                      .where((l) => l.toUpperCase() == 'EXU') // Filtro temporário para a gira de hoje
-                      .toSet()
-                      .toList()
-                    ..sort();
+                  // Decidir quais botões de linha mostrar
+                  Set<String> linesSet;
+                  final activeGira = ref.watch(activeGiraProvider(terreiroId)).value;
 
-                  if (lines.isEmpty) {
-                    // Fallback: mostrar todas as linhas disponíveis
-                    lines = mediums.map((m) => m.entity.linha).where((l) => l.isNotEmpty).toSet().toList()..sort();
+                  if (activeGira != null && activeGira.linhasParticipantes.isNotEmpty) {
+                    // Se a gira tem linhas configuradas, mostramos EXATAMENTE essas linhas
+                    linesSet = activeGira.linhasParticipantes
+                        .map((l) => getMajorLine(l))
+                        .where((l) => l.isNotEmpty)
+                        .toSet();
+                  } else {
+                    // Fallback: mostrar todas as linhas que têm médiuns presentes
+                    linesSet = mediums
+                        .map((m) => getMajorLine(m.entity.linha))
+                        .where((l) => l.isNotEmpty)
+                        .toSet();
                   }
+                  
+                  final lines = linesSet.toList()..sort();
 
                   if (lines.isEmpty) {
-                    return Center(child: Text("Nenhuma linha disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
+                    return Center(child: Text("Nenhuma linha disponível no momento.", style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 16 : 20, color: Colors.brown[900])));
                   }
 
                   return Wrap(
-                    spacing: 30,
-                    runSpacing: 30,
+                    spacing: isMobile ? 15 : 30,
+                    runSpacing: isMobile ? 15 : 30,
                     alignment: WrapAlignment.center,
-                    children: lines.map((line) => _buildLineButton(line)).toList(),
+                    children: lines.map((line) => _buildLineButton(line, isMobile)).toList(),
                   );
 
                 } else if (_selectedTipo == null) {
                   // ETAPA 2 (automática): Definir tipo como ALL e ir para entidades
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted && _selectedTipo == null) {
-                      setState(() => _selectedTipo = 'ALL');
+                      updateState(() => _selectedTipo = 'ALL');
                     }
                   });
                   return const Center(child: CircularProgressIndicator(color: Colors.amber));
@@ -577,27 +588,21 @@ extension _KioskScreenStateUI on _KioskScreenState {
                 } else {
                   // ETAPA 3: Mostrar entidades da linha selecionada
                   final filteredMediums = mediums.where((m) =>
-                    m.entity.linha.toUpperCase() == (_selectedLine ?? '').toUpperCase()
+                    isCompatibleWithGroup(m.entity.linha, m.entity.tipo, _selectedLine!)
                   ).toList();
 
-                  Map<String, List<({Medium medium, Entidade entity})>> entityMap = {};
-                  for (var pair in filteredMediums) {
-                    entityMap.putIfAbsent(pair.entity.nome, () => []).add(pair);
+                  if (filteredMediums.isEmpty) {
+                    return Center(child: Text("Nenhum guia disponível para '${_selectedLine}'.", style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 16 : 20, color: Colors.brown[900])));
                   }
 
-                  if (entityMap.isEmpty) {
-                    return Center(child: Text("Nenhum guia disponível para '${_selectedLine}'.", style: TextStyle(fontFamily: "Roboto", fontSize: 20, color: Colors.brown[900])));
-                  }
-
-                  // Converter o map para lista e aplicar a ordenação solicitada
-                  final sortedEntries = entityMap.entries.toList();
-                  sortedEntries.sort((a, b) {
-                    final mediumA = a.value.first.medium.nome.toUpperCase();
-                    final mediumB = b.value.first.medium.nome.toUpperCase();
+                  // Ordenar a lista bruta de médiuns/entidades
+                  filteredMediums.sort((a, b) {
+                    final mediumA = a.medium.nome.toUpperCase();
+                    final mediumB = b.medium.nome.toUpperCase();
 
                     int getPriority(String name) {
                       if (name.startsWith('SANDRA')) return 1;
-                      if (name.startsWith('EDUARDO')) return 2;
+                      if (name.contains('EDUARDO')) return 2;
                       if (name.startsWith('ROBSON')) return 3;
                       if (name.startsWith('JUCINEIDE')) return 4;
                       return 5;
@@ -609,21 +614,26 @@ extension _KioskScreenStateUI on _KioskScreenState {
                     if (priorityA != priorityB) {
                       return priorityA.compareTo(priorityB);
                     }
-                    return mediumA.compareTo(mediumB); // Ordem alfabética para os demais (priority = 5)
+                    return mediumA.compareTo(mediumB);
                   });
 
-                  bool isMany = sortedEntries.length > 5;
+                  bool isMany = filteredMediums.length > 5;
                   return Wrap(
-                    spacing: isMany ? 20 : 30,
-                    runSpacing: isMany ? 15 : 30,
+                    spacing: isMobile ? 10 : (isMany ? 20 : 30),
+                    runSpacing: isMobile ? 10 : (isMany ? 15 : 30),
                     alignment: WrapAlignment.center,
-                    direction: isMany ? Axis.horizontal : Axis.vertical,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: sortedEntries.map((entry) {
-                       final entityName = entry.key;
-                       final pairs = entry.value;
-                       final firstPair = pairs.first;
-                       return _buildEntityButton(context, ref, terreiroId, gira, entityName, firstPair.entity.id, firstPair.medium, isCompact: isMany);
+                    children: filteredMediums.map((pair) {
+                       return _buildEntityButton(
+                         context, 
+                         ref, 
+                         terreiroId, 
+                         gira, 
+                         pair.entity.nome, 
+                         pair.entity.id, 
+                         pair.medium, 
+                         isCompact: isMany || isMobile, 
+                         isMobile: isMobile
+                       );
                     }).toList(),
                   );
                 }
@@ -640,13 +650,13 @@ extension _KioskScreenStateUI on _KioskScreenState {
         
         // Rodapé com nome do Terreiro
         Padding(
-          padding: const EdgeInsets.only(bottom: 20, top: 10),
+          padding: EdgeInsets.only(bottom: isMobile ? 10 : 20, top: 10),
           child: Column(
             children: [
                Row(
                  mainAxisAlignment: MainAxisAlignment.center,
                  children: [
-                   Container(width: 100, height: 1.5, color: const Color(0xFFFFD700)),
+                   Container(width: isMobile ? 50 : 100, height: 1.5, color: const Color(0xFFFFD700)),
                    const SizedBox(width: 12),
                    Transform.rotate(
                      angle: 0.785398,
@@ -663,21 +673,21 @@ extension _KioskScreenStateUI on _KioskScreenState {
                      child: Container(width: 6, height: 6, color: const Color(0xFFFFD700)),
                    ),
                    const SizedBox(width: 12),
-                   Container(width: 100, height: 1.5, color: const Color(0xFFFFD700)),
+                   Container(width: isMobile ? 50 : 100, height: 1.5, color: const Color(0xFFFFD700)),
                  ],
                ),
                const SizedBox(height: 15),
                Text(
                  "T.U.C.P.B.",
                  textAlign: TextAlign.center,
-                 style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.8), fontSize: 28, fontWeight: FontWeight.bold),
+                 style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.8), fontSize: isMobile ? 20 : 28, fontWeight: FontWeight.bold),
                ),
                Padding(
                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                  child: Text(
                    "Tenda de Umbanda Caboclo Pena Branca e Tupi, Ogum Rompe Mato e Beira Mar & Mãe Maria da Cuia",
                    textAlign: TextAlign.center,
-                   style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.6), fontSize: 18),
+                   style: TextStyle(fontFamily: "Roboto", color: Colors.black.withOpacity(0.6), fontSize: isMobile ? 14 : 18),
                  ),
                ),
             ],
@@ -687,15 +697,15 @@ extension _KioskScreenStateUI on _KioskScreenState {
     );
   }
 
-  Widget _buildLineButton(String line) {
+  Widget _buildLineButton(String line, bool isMobile) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => setState(() => _selectedLine = line),
+        onTap: () => updateState(() => _selectedLine = line),
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          width: 280,
-          height: 350,
+          width: isMobile ? 150 : 280,
+          height: isMobile ? 200 : 350,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(16),
@@ -725,17 +735,17 @@ extension _KioskScreenStateUI on _KioskScreenState {
                         child: Image.asset(
                           _lineImages[normalizedKey]!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Icon(_lineIcons[line] ?? Icons.person_outline, size: 180, color: Colors.grey[700]),
+                          errorBuilder: (context, error, stackTrace) => Icon(_lineIcons[line] ?? Icons.person_outline, size: isMobile ? 80 : 180, color: Colors.grey[700]),
                         ),
                       );
                     }
-                    return Icon(_lineIcons[line] ?? Icons.person_outline, size: 180, color: Colors.grey[700]);
+                    return Icon(_lineIcons[line] ?? Icons.person_outline, size: isMobile ? 80 : 180, color: Colors.grey[700]);
                   }(),
                 ),
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
                 decoration: BoxDecoration(
                   color: Colors.grey[400]!.withOpacity(0.5),
                   borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
@@ -743,7 +753,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                 child: Text(
                   line,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: "Roboto", fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 20 : 32, fontWeight: FontWeight.w900, color: Colors.black87),
                 ),
               ),
             ],
@@ -753,15 +763,15 @@ extension _KioskScreenStateUI on _KioskScreenState {
     );
   }
 
-  Widget _buildTipoButton(String tipo) {
+  Widget _buildTipoButton(String tipo, bool isMobile) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => setState(() => _selectedTipo = tipo),
+        onTap: () => updateState(() => _selectedTipo = tipo),
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          width: 280,
-          height: 350,
+          width: isMobile ? 150 : 280,
+          height: isMobile ? 200 : 350,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(16),
@@ -785,15 +795,15 @@ extension _KioskScreenStateUI on _KioskScreenState {
                         child: Image.asset(
                           _lineImages[tipo]!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Icon(_lineIcons[tipo] ?? Icons.person_outline, size: 180, color: Colors.grey[700]),
+                          errorBuilder: (context, error, stackTrace) => Icon(_lineIcons[tipo] ?? Icons.person_outline, size: isMobile ? 80 : 180, color: Colors.grey[700]),
                         ),
                       )
-                    : Icon(_lineIcons[tipo] ?? Icons.person_outline, size: 180, color: Colors.grey[700]),
+                    : Icon(_lineIcons[tipo] ?? Icons.person_outline, size: isMobile ? 80 : 180, color: Colors.grey[700]),
                 ),
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 8 : 16),
                 decoration: BoxDecoration(
                   color: Colors.grey[400]!.withOpacity(0.5),
                   borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
@@ -801,7 +811,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                 child: Text(
                   tipo,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: "Roboto", fontSize: 32, fontWeight: FontWeight.w900, color: Colors.black87),
+                  style: TextStyle(fontFamily: "Roboto", fontSize: isMobile ? 20 : 32, fontWeight: FontWeight.w900, color: Colors.black87),
                 ),
               ),
             ],
@@ -811,7 +821,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
     );
   }
 
-  Widget _buildEntityButton(BuildContext context, WidgetRef ref, String terreiroId, Gira gira, String entityName, String entityId, Medium medium, {bool isCompact = false}) {
+  Widget _buildEntityButton(BuildContext context, WidgetRef ref, String terreiroId, Gira gira, String entityName, String entityId, Medium medium, {bool isCompact = false, bool isMobile = false}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -819,9 +829,9 @@ extension _KioskScreenStateUI on _KioskScreenState {
         Padding(
           padding: EdgeInsets.only(left: 12.0, bottom: isCompact ? 2.0 : 4.0),
           child: Text(
-            _formatMediumName(medium.nome),
+            formatMediumName(medium.nome),
             style: TextStyle(fontFamily: "Roboto", 
-              fontSize: isCompact ? 18 : 20,
+              fontSize: isMobile ? 14 : (isCompact ? 18 : 20),
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),
@@ -835,8 +845,8 @@ extension _KioskScreenStateUI on _KioskScreenState {
             },
             borderRadius: BorderRadius.circular(40),
             child: Container(
-              width: isCompact ? 300 : 340,
-              padding: EdgeInsets.symmetric(vertical: isCompact ? 12 : 20),
+              width: isMobile ? 250 : (isCompact ? 300 : 340),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : (isCompact ? 12 : 20)),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(40),
@@ -849,7 +859,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
                 entityName.toUpperCase(),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: "Roboto", 
-                  fontSize: isCompact ? 20 : 24,
+                  fontSize: isMobile ? 16 : (isCompact ? 20 : 24),
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF4A2C2A), // Cor marrom escura da foto
                   letterSpacing: 1.2,
@@ -877,7 +887,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
             const SizedBox(height: 10),
             Text(entityName, style: TextStyle(fontFamily: "Roboto", fontSize: 28, fontWeight: FontWeight.bold, color: Colors.brown[900])),
             const SizedBox(height: 20),
-            Text("Médium: ${_formatMediumName(medium.nome)}", style: TextStyle(color: Colors.brown[400], fontSize: 14)),
+            Text("Médium: ${formatMediumName(medium.nome)}", style: TextStyle(color: Colors.brown[400], fontSize: 14)),
           ],
         ),
         actions: [
@@ -929,7 +939,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
         return;
       }
 
-      setState(() {
+      updateState(() {
         _lastIssuedTicket = ticket;
         _lastIssuedEntityName = entityName;
         _lastIssuedGira = gira;
@@ -948,7 +958,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
           terreiroName: "T.U.C.P.B.",
           giraName: gira.tema,
           entityName: entityName,
-          mediumName: _formatMediumName(medium.nome),
+          mediumName: formatMediumName(medium.nome),
           mediumInitials: mediumInitials,
           ticketCode: ticket.codigoSenha,
           pixKey: "12345678900",
@@ -964,7 +974,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
       // Voltar para a tela inicial após 3 segundos
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
-          setState(() {
+          updateState(() {
             _lastIssuedTicket = null;
             _lastIssuedEntityName = null;
             _lastIssuedGira = null;
@@ -997,6 +1007,9 @@ extension _KioskScreenStateUI on _KioskScreenState {
   }
 
   Widget _buildTicketSuccessState(Ticket ticket, Gira gira, String entityName) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1005,7 +1018,7 @@ extension _KioskScreenStateUI on _KioskScreenState {
             "Sua senha é:",
             style: TextStyle(
               fontFamily: "Roboto",
-              fontSize: 48,
+              fontSize: isMobile ? 24 : 48,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -1015,18 +1028,18 @@ extension _KioskScreenStateUI on _KioskScreenState {
             ticket.codigoSenha,
             style: TextStyle(
               fontFamily: "Roboto",
-              fontSize: 70, // 50% menor que os 140 originais
+              fontSize: isMobile ? 40 : 70, // 50% menor que os 140 originais
               fontWeight: FontWeight.w900,
               color: Colors.black,
             ),
           ),
-          const SizedBox(height: 60),
+          SizedBox(height: isMobile ? 30 : 60),
           Text(
             "Aguarde a impressão total!",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: "Roboto",
-              fontSize: 56,
+              fontSize: isMobile ? 28 : 56,
               fontWeight: FontWeight.bold,
               color: Colors.brown[900],
             ),

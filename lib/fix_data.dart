@@ -9,24 +9,32 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  print('--- CONFIGURANDO MÉDIUNS PRIORITÁRIOS ---');
+  print('--- CONFIGURANDO MÉDIUNS COM NOMES COMPLETOS ---');
 
-  final names = ['Sandra', 'Robson', 'Eduardo', 'Jucineide'];
+  final names = [
+    'Sandra Heloisa Alves Delfino da Luz',
+    'Eduardo Rodrigues de Camargo',
+    'Robson Rodrigues de Camargo',
+    'Jucineide santos Gonçalves'
+  ];
   
   for (final name in names) {
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('mediums')
+      // Tenta buscar por 'nome' ou 'nomeCompleto' na coleção 'usuarios'
+      var snap = await FirebaseFirestore.instance
+          .collection('usuarios')
           .where('nome', isEqualTo: name)
           .get();
           
       if (snap.docs.isEmpty) {
-        // Se não existir, cria com 25 fichas
-        await FirebaseFirestore.instance.collection('mediums').add({
-          'nome': name,
-          'maxFichas': 25,
-        });
-        print('✅ Criado médium "$name" com 25 fichas.');
+        snap = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .where('nomeCompleto', isEqualTo: name)
+            .get();
+      }
+      
+      if (snap.docs.isEmpty) {
+        print('⚠️ Médium "$name" não encontrado no banco.');
       } else {
         // Se existir, atualiza para 25 fichas
         for (final doc in snap.docs) {

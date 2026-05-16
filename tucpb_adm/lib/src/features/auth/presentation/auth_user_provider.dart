@@ -37,25 +37,28 @@ final userDataProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         return data;
       }
 
-      // 3) Nenhum documento encontrado → criar como Admin automaticamente
-      final novoAdmin = {
-        'nome': user.displayName ?? user.email?.split('@').first ?? 'Admin',
-        'email': user.email ?? '',
-        'perfil': 'Admin',
-        'ativo': true,
-        'fotoUrl': user.photoURL ?? '',
-        'dataCriacao': FieldValue.serverTimestamp(),
-      };
-
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .set(novoAdmin);
-
-      final result = Map<String, dynamic>.from(novoAdmin);
-      result['uid'] = user.uid;
-      result['docId'] = user.uid;
-      return result;
+      // 3) Forçar Admin para Thabata e garantir que usuários existentes sejam Admin no dev
+      if (user.email == 'thaareco@gmail.com' || (user.email != null && user.email!.isNotEmpty)) {
+        final adminData = {
+          'nome': user.displayName ?? user.email?.split('@').first ?? 'Admin',
+          'email': user.email,
+          'perfil': 'Admin',
+          'ativo': true,
+          'fotoUrl': user.photoURL ?? '',
+          'dataCriacao': FieldValue.serverTimestamp(),
+        };
+        
+        // Atualiza no Firestore para persistir o acesso
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user.uid)
+            .set(adminData, SetOptions(merge: true));
+        
+        final result = Map<String, dynamic>.from(adminData);
+        result['uid'] = user.uid;
+        result['docId'] = user.uid;
+        return result;
+      }
     } catch (e) {
       return {
         'uid': user.uid,

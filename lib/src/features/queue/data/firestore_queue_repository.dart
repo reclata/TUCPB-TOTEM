@@ -36,8 +36,8 @@ class FirestoreQueueRepository {
     try {
       debugPrint("DEBUG: Issuing real ticket for entity: $entidadeId");
       
-      // 1. Get Current Sequence for Medium
-      final counterRef = _firestore.collection('counters').doc('${medium.id}_$today');
+      // 1. Get Current Sequence for (Medium, Entity)
+      final counterRef = _firestore.collection('counters').doc('${medium.id}_${entidadeId}_$today');
       final counterSnap = await counterRef.get();
       int nextSeq = 1;
       if (counterSnap.exists) {

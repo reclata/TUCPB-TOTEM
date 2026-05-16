@@ -30,28 +30,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       String email = input;
-      String password = passwordInput.isEmpty ? "TUCPB" : passwordInput;
+      String password = passwordInput.isEmpty ? "TUCPB26" : passwordInput;
 
-      // Check if input is CPF (only digits or formatted)
-      final isCPF = RegExp(r'^\d+$').hasMatch(input.replaceAll(RegExp(r'[^\d]'), ''));
+      // Check if input is CPF (no '@' and exactly 11 digits)
+      final cleanInput = input.replaceAll(RegExp(r'[^\d]'), '');
+      final isCPF = !input.contains('@') && cleanInput.length == 11;
       
       if (isCPF) {
-        final cpfRaw = input.replaceAll(RegExp(r'[^\d]'), '');
-        // Search user by CPF in dadosPessoais.cpf
-        final snap = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .where('dadosPessoais.cpf', isEqualTo: input) // Search with formatting if user typed it
-            .get();
-        
-        var docs = snap.docs;
-        if (docs.isEmpty) {
-           // Try searching without formatting
-           final snap2 = await FirebaseFirestore.instance
-              .collection('usuarios')
-              .where('dadosPessoais.cpf', isEqualTo: cpfRaw)
-              .get();
-           docs = snap2.docs;
-        }
+        final cpfRaw = cleanInput;
+        // Search user by CPF in dadosPessoais.cpf (robust in-memory search to handle varied formatting)
+        final snap = await FirebaseFirestore.instance.collection('usuarios').get();
+        final docs = snap.docs.where((doc) {
+          final dbCpf = doc.data()['dadosPessoais']?['cpf']?.toString().replaceAll(RegExp(r'[^\d]'), '');
+          return dbCpf == cpfRaw;
+        }).toList();
 
         if (docs.isEmpty) {
           throw "Usuário com CPF $input não encontrado.";

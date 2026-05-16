@@ -15,6 +15,8 @@ import 'package:terreiro_queue_system/src/features/kiosk/presentation/kiosk_scre
 import 'package:terreiro_queue_system/src/features/admin/presentation/admin_screen.dart';
 import 'package:terreiro_queue_system/src/features/tv/presentation/tv_screen.dart';
 import 'package:terreiro_queue_system/src/features/queue/presentation/queue_web_screen.dart';
+import 'package:terreiro_queue_system/src/features/auth/presentation/fix_admin_screen.dart';
+import 'package:terreiro_queue_system/src/features/auth/presentation/clear_data_screen.dart';
 import 'package:terreiro_queue_system/src/shared/services/printer_service.dart';
 import 'package:terreiro_queue_system/firebase_options.dart';
 
@@ -36,20 +38,18 @@ void main() async {
     // Isso evita texto invisível quando o dispositivo não tem internet
     GoogleFonts.config.allowRuntimeFetching = false;
     
-    // No Kiosk (Android), autenticar anonimamente para permitir leitura do Firestore
-    // sem exigir login manual do usuário
-    if (!kIsWeb) {
-      try {
-        final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser == null) {
-          await FirebaseAuth.instance.signInAnonymously();
-          debugPrint('[KIOSK] Autenticação anônima realizada com sucesso.');
-        } else {
-          debugPrint('[KIOSK] Usuário já autenticado: ${currentUser.uid}');
-        }
-      } catch (authError) {
-        debugPrint('[KIOSK] Falha na autenticação anônima: $authError');
+    // Autenticar anonimamente para permitir leitura do Firestore (Totem, TV e login)
+    // sem exigir login manual do usuário inicialmente
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+        debugPrint('Autenticação anônima realizada com sucesso.');
+      } else {
+        debugPrint('Usuário já autenticado: ${currentUser.uid}');
       }
+    } catch (authError) {
+      debugPrint('Falha na autenticação anônima: $authError');
     }
   } catch (e) {
     debugPrint("Firebase init failed: $e");
@@ -66,10 +66,12 @@ final _router = GoRouter(
   refreshListenable: GoInfra.authStream, // Listen to auth changes
   redirect: (context, state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isLoggingIn = state.uri.toString() == '/login';
-    final isPublicRoute = state.uri.toString().startsWith('/tv') || 
-                          state.uri.toString().startsWith('/queue') ||
-                          state.uri.toString().startsWith('/kiosk');
+    final isLoggingIn = state.uri.path == '/login';
+    final isPublicRoute = state.uri.path.startsWith('/tv') || 
+                          state.uri.path.startsWith('/queue') ||
+                          state.uri.path.startsWith('/kiosk');
+
+    debugPrint('[ROUTER] path: ${state.uri.path}, isLoggedIn: $isLoggedIn, isPublic: $isPublicRoute');
 
     if (!isLoggedIn && !isPublicRoute && !isLoggingIn) {
       return '/login';
@@ -112,6 +114,18 @@ final _router = GoRouter(
         return NoTransitionPage(
           child: TvScreen(panelId: state.pathParameters['panelId']!),
         );
+      },
+    ),
+    GoRoute(
+      path: '/fix-admin',
+      pageBuilder: (context, state) {
+        return NoTransitionPage(child: const FixAdminScreen());
+      },
+    ),
+    GoRoute(
+      path: '/clear-data',
+      pageBuilder: (context, state) {
+        return NoTransitionPage(child: const ClearDataScreen());
       },
     ),
     GoRoute(

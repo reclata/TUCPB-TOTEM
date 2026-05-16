@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
+
+import 'package:terreiro_queue_system/src/shared/providers/global_providers.dart';
+import 'package:terreiro_queue_system/src/shared/services/call_sound_service.dart';
 
 // Provider to stream the TV Panel
 final tvPanelProvider = StreamProvider.family<TvPanel?, String>((ref, panelId) {
@@ -18,21 +22,6 @@ final tvPanelProvider = StreamProvider.family<TvPanel?, String>((ref, panelId) {
     data['id'] = snap.id;
     return TvPanel.fromJson(data);
   });
-});
-
-// Provider para buscar a Gira ativa diretamente (Status: aberta)
-final activeGiraProvider = StreamProvider<Gira?>((ref) {
-  return FirebaseFirestore.instance
-      .collection('giras')
-      .where('status', isEqualTo: 'aberta')
-      .limit(1)
-      .snapshots()
-      .map((snap) {
-        if (snap.docs.isEmpty) return null;
-        final data = snap.docs.first.data();
-        data['id'] = snap.docs.first.id;
-        return Gira.fromJson(data);
-      });
 });
 
 // Provider to stream the history for this panel, filtered by Gira
@@ -59,24 +48,60 @@ final tvHistoryProvider = StreamProvider.family<List<Ticket>, String>((ref, arg)
       .map((snap) => snap.docs.map((d) => Ticket.fromJson(d.data())).toList());
 });
 
-class TvScreen extends ConsumerWidget {
+class TvScreen extends ConsumerStatefulWidget {
   final String panelId;
   const TvScreen({super.key, required this.panelId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final panelAsync = ref.watch(tvPanelProvider(panelId));
-    final activeGiraAsync = ref.watch(activeGiraProvider);
-    
-    // Pega o ID da Gira ativa diretamente (ignora o do painel que pode estar desatualizado)
+  ConsumerState<TvScreen> createState() => _TvScreenState();
+}
+
+class _TvScreenState extends ConsumerState<TvScreen> {
+  String? _lastSoundKey;
+  bool _soundEnabled = false;
+
+  void _enableSound() {
+    if (_soundEnabled) return;
+    CallSoundService.instance.unlockFromGesture();
+    setState(() => _soundEnabled = true);
+  }
+
+  void _onPanelUpdate(TvPanel? panel, String giraId) {
+    if (panel == null || panel.giraId != giraId) return;
+    final senha = panel.senhaAtual;
+    if (senha == null) return;
+
+    final key =
+        '${senha.senhaId}_${senha.chamadaCount}_${senha.dataHoraChamada.millisecondsSinceEpoch}';
+    if (_lastSoundKey == key) return;
+    _lastSoundKey = key;
+    CallSoundService.instance.playCallSound();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const terreiroId = 'demo-terreiro';
+    final panelAsync = ref.watch(tvPanelProvider(widget.panelId));
+    final activeGiraAsync = ref.watch(activeGiraProvider(terreiroId));
+
     final activeGira = activeGiraAsync.value;
     final giraId = activeGira?.id ?? '';
-    
-    final historyAsync = ref.watch(tvHistoryProvider("${panelId}_$giraId"));
+
+    ref.listen<AsyncValue<TvPanel?>>(tvPanelProvider(widget.panelId), (prev, next) {
+      final currentGiraId = ref.read(activeGiraProvider(terreiroId)).valueOrNull?.id ?? '';
+      _onPanelUpdate(next.valueOrNull, currentGiraId);
+    });
+
+    final historyAsync = ref.watch(tvHistoryProvider("${widget.panelId}_$giraId"));
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final scale = screenHeight / 1080;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: panelAsync.when(
+      body: Stack(
+        children: [
+          panelAsync.when(
         data: (panel) {
           if (panel == null) {
             return const Center(
@@ -87,7 +112,8 @@ class TvScreen extends ConsumerWidget {
             );
           }
 
-          final currentSenha = panel.senhaAtual;
+          // Só mostrar a senha atual se ela pertencer à Gira ativa
+          final currentSenha = (panel.giraId == giraId) ? panel.senhaAtual : null;
 
           return Column(
             children: [
@@ -118,7 +144,7 @@ class TvScreen extends ConsumerWidget {
                             color: Colors.brown[900],
                             child: currentSenha == null
                                 ? const _IdleCarousel() // Fallback se tiver histórico mas nenhuma chamada agora
-                                : _buildCurrentSenhaPanel(currentSenha),
+                                : _buildCurrentSenhaPanel(currentSenha, scale),
                           ),
                         ),
 
@@ -127,24 +153,25 @@ class TvScreen extends ConsumerWidget {
                           flex: 1,
                           child: Container(
                             color: const Color(0xFF2E1C15),
-                            padding: const EdgeInsets.all(32),
+                            padding: EdgeInsets.all(32 * scale),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const SizedBox(height: 24),
+                                SizedBox(height: 24 * scale),
                                 ClipOval(
-                                  child: Image.asset('assets/images/logo.png', height: 120),
+                                  child: Image.asset('assets/images/logo.png', height: 120 * scale),
                                 ),
-                                const SizedBox(height: 48),
+                                SizedBox(height: 48 * scale),
                                 Text(
                                   'ÚLTIMAS CHAMADAS',
                                   style: GoogleFonts.outfit(
                                     color: Colors.white38,
+                                    fontSize: 16 * scale,
                                     letterSpacing: 3,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 32),
+                                SizedBox(height: 32 * scale),
                                 Expanded(
                                   child: ListView.builder(
                                     itemCount: filteredHistory.length,
@@ -153,11 +180,11 @@ class TvScreen extends ConsumerWidget {
                                     },
                                   ),
                                 ),
-                                const SizedBox(height: 24),
+                                SizedBox(height: 24 * scale),
                                 Text(
                                   'Aguarde sua senha ser chamada',
                                   style: GoogleFonts.outfit(
-                                    fontSize: 18,
+                                    fontSize: 18 * scale,
                                     color: Colors.white24,
                                   ),
                                 ),
@@ -175,7 +202,7 @@ class TvScreen extends ConsumerWidget {
                     }
                     return Container(
                       color: Colors.brown[900],
-                      child: _buildCurrentSenhaPanel(currentSenha),
+                      child: _buildCurrentSenhaPanel(currentSenha, scale),
                     );
                   },
                 ),
@@ -190,23 +217,75 @@ class TvScreen extends ConsumerWidget {
           child: Text('Erro: $e', style: const TextStyle(color: Colors.red, fontSize: 24)),
         ),
       ),
+          if (!_soundEnabled)
+            Positioned.fill(
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (_) => _enableSound(),
+                child: ColoredBox(
+                  color: Colors.black26,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(24, 0, 24, 80 * scale),
+                      child: Material(
+                        color: Colors.brown[900],
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24 * scale,
+                            vertical: 16 * scale,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.amber, width: 2),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.volume_up, color: Colors.amber, size: 32 * scale),
+                              SizedBox(width: 12 * scale),
+                              Flexible(
+                                child: Text(
+                                  'TOQUE EM QUALQUER LUGAR DA TELA PARA ATIVAR O SOM',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.amber,
+                                    fontSize: 18 * scale,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  // Widget auxiliar para construir o painel da senha atual
-  Widget _buildCurrentSenhaPanel(TvPanelSenhaAtual currentSenha) {
+  Widget _buildCurrentSenhaPanel(TvPanelSenhaAtual currentSenha, double scale) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Header: Terreiro / Gira
         Padding(
-          padding: const EdgeInsets.only(bottom: 40),
+          padding: EdgeInsets.only(bottom: 40 * scale),
           child: Column(
             children: [
               Text(
                 'T.U.C.P.B.',
                 style: GoogleFonts.outfit(
-                  fontSize: 24,
+                  fontSize: 24 * scale,
                   color: Colors.white54,
                   letterSpacing: 8,
                 ),
@@ -215,7 +294,7 @@ class TvScreen extends ConsumerWidget {
               Text(
                 currentSenha.giraNome.toUpperCase(),
                 style: GoogleFonts.outfit(
-                  fontSize: 32,
+                  fontSize: 32 * scale,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 4,
@@ -227,7 +306,7 @@ class TvScreen extends ConsumerWidget {
         
         // Label
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 40 * scale, vertical: 12 * scale),
           decoration: BoxDecoration(
             color: Colors.amber.withOpacity(0.15),
             borderRadius: BorderRadius.circular(12),
@@ -236,30 +315,33 @@ class TvScreen extends ConsumerWidget {
           child: Text(
             'SENHA CHAMADA',
             style: GoogleFonts.outfit(
-              fontSize: 36,
+              fontSize: 36 * scale,
               color: Colors.amber,
               fontWeight: FontWeight.w600,
               letterSpacing: 6,
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        SizedBox(height: 40 * scale),
 
         // Código da senha em destaque
-        Text(
-          currentSenha.codigoSenha,
-          style: GoogleFonts.outfit(
-            fontSize: 240,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            height: 1,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            currentSenha.codigoSenha,
+            style: GoogleFonts.outfit(
+              fontSize: 240 * scale,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              height: 1,
+            ),
           ),
         ),
-        const SizedBox(height: 40),
+        SizedBox(height: 40 * scale),
 
         // Entidade e Médium
         Container(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(32 * scale),
           decoration: BoxDecoration(
             color: Colors.black12,
             borderRadius: BorderRadius.circular(24),
@@ -267,20 +349,20 @@ class TvScreen extends ConsumerWidget {
           child: Column(
             children: [
               Text(
-                currentSenha.entidadeNome.toUpperCase(),
+                'MÉDIUM: ${formatMediumName(currentSenha.mediumNome).toUpperCase()}',
                 style: GoogleFonts.outfit(
-                  fontSize: 48, 
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber, 
+                  fontSize: 32 * scale, 
+                  color: Colors.white70,
                   letterSpacing: 2
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16 * scale),
               Text(
-                'MÉDIUM: ${currentSenha.mediumNome.toUpperCase()}',
+                currentSenha.entidadeNome.toUpperCase(),
                 style: GoogleFonts.outfit(
-                  fontSize: 28, 
-                  color: Colors.white70,
+                  fontSize: 56 * scale, 
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber, 
                   letterSpacing: 2
                 ),
               ),
@@ -288,12 +370,12 @@ class TvScreen extends ConsumerWidget {
           ),
         ),
 
-        const SizedBox(height: 40),
+        SizedBox(height: 40 * scale),
         // Mensagem
         Text(
           'DIRIJA-SE AO ATENDIMENTO',
           style: GoogleFonts.outfit(
-            fontSize: 32, 
+            fontSize: 32 * scale, 
             color: Colors.greenAccent,
             fontWeight: FontWeight.w500,
             letterSpacing: 2
@@ -310,9 +392,11 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.height / 1080;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      margin: EdgeInsets.only(bottom: 16 * scale),
+      padding: EdgeInsets.symmetric(horizontal: 24 * scale, vertical: 20 * scale),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
@@ -323,7 +407,7 @@ class _HistoryItem extends StatelessWidget {
           Text(
             ticket.codigoSenha,
             style: GoogleFonts.outfit(
-              fontSize: 36,
+              fontSize: 36 * scale,
               fontWeight: FontWeight.bold,
               color: Colors.white60,
             ),
@@ -333,7 +417,7 @@ class _HistoryItem extends StatelessWidget {
             ticket.dataHoraChamada != null
                 ? DateFormat('HH:mm').format(ticket.dataHoraChamada!)
                 : '--:--',
-            style: GoogleFonts.outfit(fontSize: 24, color: Colors.white30),
+            style: GoogleFonts.outfit(fontSize: 24 * scale, color: Colors.white30),
           ),
         ],
       ),
@@ -364,10 +448,11 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
   void didChangeDependencies() {
     super.didChangeDependencies();
     
+    final scale = MediaQuery.of(context).size.height / 1080;
     final textSpan = TextSpan(
       text: '${widget.text}   ✦   ',
       style: GoogleFonts.outfit(
-        fontSize: 28, 
+        fontSize: 28 * scale, 
         color: Colors.amber, 
         fontWeight: FontWeight.bold, 
         letterSpacing: 6
@@ -395,11 +480,12 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final scale = MediaQuery.of(context).size.height / 1080;
     final int repeatCount = _textWidth > 0 ? (screenWidth / _textWidth).ceil() + 3 : 10;
     final fullText = List.generate(repeatCount, (_) => '${widget.text}   ✦   ').join('');
 
     return Container(
-      height: 60,
+      height: 60 * scale,
       width: double.infinity,
       color: widget.isBottom ? Colors.brown[900] : Colors.brown[800],
       alignment: Alignment.centerLeft,
@@ -417,7 +503,7 @@ class _TickerBannerState extends State<_TickerBanner> with SingleTickerProviderS
           child: Text(
             fullText,
             style: GoogleFonts.outfit(
-              fontSize: 28, 
+              fontSize: 28 * scale, 
               color: Colors.amber, 
               fontWeight: FontWeight.bold, 
               letterSpacing: 6

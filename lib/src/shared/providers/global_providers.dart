@@ -78,40 +78,42 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
     if (!m.ativo) return false;
     // Se houver uma gira aberta com presenças configuradas, filtrar os presentes
     if (activeGira != null && activeGira.presencas.isNotEmpty) {
-      return activeGira.presencas[m.id] ?? false;
+      final isPresent = activeGira.presencas[m.id] ?? false;
+      return isPresent;
     }
     // Se não há gira ou a gira não tem presenças, mostra todos os ativos
     return true;
   }).toList();
   
-// Normalização agora vem de spiritual_utils.dart
-
   // Determinar as linhas permitidas (flegadas no admin ou sugeridas pelo tema)
   List<String>? allowedLines;
   if (activeGira != null) {
+    print('[DEBUG-GIRA] Ativa: ${activeGira.tema}, Linha: ${activeGira.linha}');
     if (activeGira.linhasParticipantes.isNotEmpty) {
-      // Prioridade: Linhas selecionadas manualmente no Admin
       allowedLines = activeGira.linhasParticipantes;
     } else if (activeGira.linha.isNotEmpty) {
-      // Fallback: Usar o grupo de linhas associado à linha principal da gira
       allowedLines = LINE_GROUPS[normalizeSpiritualLine(activeGira.linha)] ?? [activeGira.linha];
     }
+    print('[DEBUG-GIRA] AllowedLines: $allowedLines');
   }
 
   List<({Medium medium, Entidade entity})> result = [];
+  final seenKeys = <String>{}; 
+
   for (var m in visibleMediums) {
-    // Para cada entidade ativa do médium
     for (var medEnt in m.entidades) {
       if (medEnt.status == 'ativo') {
-        // 1. Filtrar por seleção granular da Gira (se houver)
-        if (activeGira != null && (activeGira.entidadesParticipantes ?? <String>[]).isNotEmpty) {
-          if (!activeGira.entidadesParticipantes!.contains(medEnt.entidadeId)) {
-            continue;
+        bool explicitlySelected = false;
+        
+        if (activeGira != null && activeGira.entidadesParticipantes.isNotEmpty) {
+          final participatingIds = activeGira.entidadesParticipantes;
+          if (participatingIds.contains(medEnt.entidadeId)) {
+            explicitlySelected = true;
           }
         }
 
         // 2. Filtrar apenas entidades da linha permitida (safety check)
-        if (allowedLines != null) {
+        if (allowedLines != null && !explicitlySelected) {
           final entLinha = normalizeSpiritualLine(medEnt.linha);
           final entTipo = normalizeSpiritualLine(medEnt.tipo);
           
@@ -120,22 +122,36 @@ final activeMediumsProvider = Provider.family<AsyncValue<List<({Medium medium, E
             return entLinha == alNorm || entTipo == alNorm;
           });
           
-          if (!isCompatible) continue;
+          final explicitlySelectedLog = explicitlySelected;
+          final participatingIdsLog = activeGira?.entidadesParticipantes ?? [];
+          
+          if (m.nome.toLowerCase().contains('eduardo') && m.nome.toLowerCase().contains('camargo')) {
+            print('[DEBUG-EDUARDO] Entidade: ${medEnt.entidadeNome} (ID: ${medEnt.entidadeId}), Linha: $entLinha, Tipo: $entTipo');
+            print('[DEBUG-EDUARDO] Compatible: $isCompatible, ExplicitlySelected: $explicitlySelectedLog');
+            print('[DEBUG-EDUARDO] ParticipatingIDs: $participatingIdsLog');
+            print('[DEBUG-EDUARDO] Allowed: $allowedLines');
+          }
+
+          if (!isCompatible && !explicitlySelected) continue;
         }
+
+        final key = '${m.id}_${medEnt.entidadeId}_${medEnt.entidadeNome}';
+        if (seenKeys.contains(key)) continue;
+        seenKeys.add(key);
 
         try {
           final ent = entities.firstWhere((e) => e.id == medEnt.entidadeId);
           result.add((medium: m, entity: ent));
         } catch (_) {
-          // Entidade não encontrada, fallback para dados denormalizados no Medium
           if (medEnt.entidadeNome.isNotEmpty) {
-             result.add((medium: m, entity: Entidade(
-               id: medEnt.entidadeId,
+             final fallbackEnt = Entidade(
+               id: medEnt.entidadeId.isEmpty ? 'fallback-${medEnt.entidadeNome}' : medEnt.entidadeId,
                terreiroId: m.terreiroId ?? '',
-               nome: medEnt.entidadeNome,
-               linha: medEnt.linha,
-               tipo: medEnt.tipo,
-             )));
+               nome: medEnt.entidadeNome.isEmpty ? 'Guia' : medEnt.entidadeNome,
+               linha: medEnt.linha.isEmpty ? (allowedLines?.first ?? 'CABOCLO') : medEnt.linha,
+               tipo: medEnt.tipo.isEmpty ? 'Guia' : medEnt.tipo,
+             );
+             result.add((medium: m, entity: fallbackEnt));
           }
         }
       }

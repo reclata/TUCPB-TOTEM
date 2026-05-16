@@ -514,7 +514,7 @@ class _ImportantInformation extends ConsumerWidget {
               }
               final docs = (snapshot.data as dynamic).docs;
               return Column(
-                children: docs.map((d) => _ReminderItem(data: d.data() as Map<String, dynamic>)).toList(),
+                children: docs.map<Widget>((d) => _ReminderItem(data: d.data() as Map<String, dynamic>)).toList(),
               );
             },
           ),
