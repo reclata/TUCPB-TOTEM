@@ -300,6 +300,8 @@ class TvPanelSenhaAtual {
   @TimestampConverter()
   final DateTime dataHoraChamada;
   final int chamadaCount;
+  @JsonKey(defaultValue: false)
+  final bool isLastTicket;
 
   const TvPanelSenhaAtual({
     required this.senhaId,
@@ -309,6 +311,7 @@ class TvPanelSenhaAtual {
     required this.giraNome,
     required this.dataHoraChamada,
     required this.chamadaCount,
+    this.isLastTicket = false,
   });
 
   factory TvPanelSenhaAtual.fromJson(Map<String, dynamic> json) => _$TvPanelSenhaAtualFromJson(json);
@@ -327,6 +330,7 @@ class TvPanel {
   @TimestampConverter()
   final DateTime ultimaAtualizacao;
   final TvPanelSenhaAtual? senhaAtual;
+  final List<String>? carouselImages;
 
   const TvPanel({
     required this.id,
@@ -338,6 +342,7 @@ class TvPanel {
     required this.giraId,
     required this.ultimaAtualizacao,
     this.senhaAtual,
+    this.carouselImages,
   });
 
   factory TvPanel.fromJson(Map<String, dynamic> json) => _$TvPanelFromJson(json);

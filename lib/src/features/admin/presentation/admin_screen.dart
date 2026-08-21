@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'usuarios_section.dart';
 import 'senhas_screen.dart';
+import 'carrossel_tv_screen.dart';
 import 'package:terreiro_queue_system/src/shared/services/printer_service.dart';
 import 'package:terreiro_queue_system/src/shared/utils/spiritual_utils.dart';
 import 'package:terreiro_queue_system/src/shared/setup/printer_config.dart';
@@ -175,6 +176,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                         _buildMenuItem(Icons.settings_outlined, 'Configurações', 5),
                       if (user?.perfilAcesso == 'admin')
                         _buildMenuItem(Icons.print_outlined, 'Sistema', 6),
+                      if (user?.perfilAcesso == 'admin')
+                        _buildMenuItem(Icons.photo_library_outlined, 'Carrossel TV', 7),
                       
                       ListTile(
                         leading: const Icon(Icons.logout, color: Colors.white70, size: 20),
@@ -328,8 +331,12 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return 'Senhas';
       case 4:
         return 'Usuários';
+      case 5:
+        return 'Permissões';
       case 6:
         return 'Configurações de Sistema';
+      case 7:
+        return 'Carrossel da TV';
       default:
         return 'T.U.C.P.B. Token';
     }
@@ -351,6 +358,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         return _ConfiguracoesScreen();
       case 6:
         return _SistemaScreen();
+      case 7:
+        return const CarrosselTvScreen();
       default:
         return const Center(child: Text('Em construção'));
     }

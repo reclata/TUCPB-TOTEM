@@ -246,6 +246,7 @@ TvPanelSenhaAtual _$TvPanelSenhaAtualFromJson(Map<String, dynamic> json) =>
         json['dataHoraChamada'] as Object,
       ),
       chamadaCount: (json['chamadaCount'] as num).toInt(),
+      isLastTicket: json['isLastTicket'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$TvPanelSenhaAtualToJson(TvPanelSenhaAtual instance) =>
@@ -259,6 +260,7 @@ Map<String, dynamic> _$TvPanelSenhaAtualToJson(TvPanelSenhaAtual instance) =>
         instance.dataHoraChamada,
       ),
       'chamadaCount': instance.chamadaCount,
+      'isLastTicket': instance.isLastTicket,
     };
 
 TvPanel _$TvPanelFromJson(Map<String, dynamic> json) => TvPanel(
@@ -275,6 +277,9 @@ TvPanel _$TvPanelFromJson(Map<String, dynamic> json) => TvPanel(
   senhaAtual: json['senhaAtual'] == null
       ? null
       : TvPanelSenhaAtual.fromJson(json['senhaAtual'] as Map<String, dynamic>),
+  carouselImages: (json['carouselImages'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
 );
 
 Map<String, dynamic> _$TvPanelToJson(TvPanel instance) => <String, dynamic>{
@@ -289,4 +294,5 @@ Map<String, dynamic> _$TvPanelToJson(TvPanel instance) => <String, dynamic>{
     instance.ultimaAtualizacao,
   ),
   'senhaAtual': instance.senhaAtual?.toJson(),
+  'carouselImages': instance.carouselImages,
 };
