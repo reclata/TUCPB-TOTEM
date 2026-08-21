@@ -1,8 +1,7 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 import '../data/admin_repository.dart';
@@ -42,27 +41,39 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
   Future<void> _uploadImage(TvPanel panel) async {
     try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1920,
-        maxHeight: 1080,
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
       );
-      if (picked == null) return;
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Não foi possível ler o arquivo. Tente novamente."),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
 
       setState(() {
         _isUploading = true;
         _uploadProgress = 0.0;
       });
 
-      final bytes = await picked.readAsBytes();
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
       final storageRef = FirebaseStorage.instance.ref().child('carousel/$fileName');
 
       final uploadTask = storageRef.putData(
         bytes,
-        SettableMetadata(contentType: 'image/jpeg'),
+        SettableMetadata(contentType: 'image/${file.extension ?? 'jpeg'}'),
       );
 
       uploadTask.snapshotEvents.listen((event) {
