@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -71,21 +72,17 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
       final storageRef = FirebaseStorage.instance.ref().child('carousel/$fileName');
 
-      final uploadTask = storageRef.putData(
-        bytes,
-        SettableMetadata(contentType: 'image/${file.extension ?? 'jpeg'}'),
+      // Converte para base64 e usa putString — mais confiável no Flutter Web
+      final base64Data = base64Encode(bytes);
+      final mimeType = 'image/${file.extension ?? 'jpeg'}';
+      await storageRef.putString(
+        base64Data,
+        format: PutStringFormat.base64,
+        metadata: SettableMetadata(contentType: mimeType),
       );
 
-      uploadTask.snapshotEvents.listen((event) {
-        if (event.totalBytes > 0) {
-          setState(() {
-            _uploadProgress = event.bytesTransferred / event.totalBytes;
-          });
-        }
-      });
-
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
+      // Obtém a URL diretamente da referência
+      final downloadUrl = await storageRef.getDownloadURL();
 
       final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
       currentList.add(downloadUrl);
@@ -126,6 +123,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       if (mounted) {
         setState(() {
           _isUploading = false;
+          _uploadProgress = 0.0;
         });
       }
     }
@@ -134,6 +132,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
   Future<void> _addUrlImage(TvPanel panel) async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
+
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       ScaffoldMessenger.of(context).showSnackBar(
