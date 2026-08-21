@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 import '../data/admin_repository.dart';
 
@@ -42,6 +43,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
   Future<void> _uploadImage(TvPanel panel) async {
     try {
+      // PASSO 1: Selecionar arquivo
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
@@ -69,38 +71,67 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
         _uploadProgress = 0.0;
       });
 
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final storageRef = FirebaseStorage.instance.ref().child('carousel/$fileName');
+      // PASSO 2: Upload via REST API (evita bug do firebase_storage_web)
+      String downloadUrl;
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) throw Exception('Usuário não autenticado.');
+        final idToken = await user.getIdToken();
 
-      // Converte para base64 e usa putString — mais confiável no Flutter Web
-      final base64Data = base64Encode(bytes);
-      final mimeType = 'image/${file.extension ?? 'jpeg'}';
-      await storageRef.putString(
-        base64Data,
-        format: PutStringFormat.base64,
-        metadata: SettableMetadata(contentType: mimeType),
-      );
+        final mimeType = 'image/${file.extension ?? 'jpeg'}';
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+        final objectName = Uri.encodeComponent('carousel/$fileName');
+        const bucket = 'tucpb---token.firebasestorage.app';
 
-      // Obtém a URL diretamente da referência
-      final downloadUrl = await storageRef.getDownloadURL();
+        final uploadUri = Uri.parse(
+          'https://firebasestorage.googleapis.com/v0/b/$bucket/o?uploadType=media&name=${Uri.encodeComponent('carousel/$fileName')}',
+        );
 
-      final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
-      currentList.add(downloadUrl);
+        final response = await http.post(
+          uploadUri,
+          headers: {
+            'Authorization': 'Bearer $idToken',
+            'Content-Type': mimeType,
+          },
+          body: bytes,
+        );
 
-      final updatedPanel = TvPanel(
-        id: panel.id,
-        terreiroId: panel.terreiroId,
-        nomePainel: panel.nomePainel,
-        status: panel.status,
-        modo: panel.modo,
-        entidadeId: panel.entidadeId,
-        giraId: panel.giraId,
-        ultimaAtualizacao: DateTime.now(),
-        senhaAtual: panel.senhaAtual,
-        carouselImages: currentList,
-      );
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}: ${response.body}');
+        }
 
-      await ref.read(adminRepositoryProvider).updateTvPanel(updatedPanel);
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = responseData['downloadTokens'] as String?;
+        if (token == null) throw Exception('Token de download não retornado.');
+
+        downloadUrl =
+            'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectName?alt=media&token=$token';
+      } catch (uploadErr) {
+        throw Exception('Falha no upload: $uploadErr');
+      }
+
+      // PASSO 3: Salvar URL no Firestore
+      try {
+        final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
+        currentList.add(downloadUrl);
+
+        final updatedPanel = TvPanel(
+          id: panel.id,
+          terreiroId: panel.terreiroId,
+          nomePainel: panel.nomePainel,
+          status: panel.status,
+          modo: panel.modo,
+          entidadeId: panel.entidadeId,
+          giraId: panel.giraId,
+          ultimaAtualizacao: DateTime.now(),
+          senhaAtual: panel.senhaAtual,
+          carouselImages: currentList,
+        );
+
+        await ref.read(adminRepositoryProvider).updateTvPanel(updatedPanel);
+      } catch (firestoreErr) {
+        throw Exception('Falha ao salvar no Firestore: $firestoreErr');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,6 +159,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       }
     }
   }
+
 
   Future<void> _addUrlImage(TvPanel panel) async {
     final url = _urlController.text.trim();
@@ -213,8 +245,22 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       // Se for uma imagem do storage, tentar deletá-la para economizar espaço
       if (removedImage.contains('firebasestorage.googleapis.com')) {
         try {
-          final storageRef = FirebaseStorage.instance.refFromURL(removedImage);
-          await storageRef.delete();
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            final idToken = await user.getIdToken();
+            // Extrai o path do objeto da URL de download
+            final uri = Uri.parse(removedImage);
+            final objectPath = uri.queryParameters['alt'] != null
+                ? uri.path.replaceFirst('/v0/b/', '').split('/o/').last
+                : '';
+            if (objectPath.isNotEmpty) {
+              const bucket = 'tucpb---token.firebasestorage.app';
+              await http.delete(
+                Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath'),
+                headers: {'Authorization': 'Bearer $idToken'},
+              );
+            }
+          }
         } catch (e) {
           debugPrint('Aviso ao deletar imagem do storage: $e');
         }
@@ -280,11 +326,22 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
     try {
       // Tentar limpar imagens personalizadas do storage
       if (panel.carouselImages != null) {
+        final user = FirebaseAuth.instance.currentUser;
+        final idToken = user != null ? await user.getIdToken() : null;
         for (var img in panel.carouselImages!) {
-          if (img.contains('firebasestorage.googleapis.com')) {
+          if (img.contains('firebasestorage.googleapis.com') && idToken != null) {
             try {
-              final storageRef = FirebaseStorage.instance.refFromURL(img);
-              await storageRef.delete();
+              final uri = Uri.parse(img);
+              final objectPath = uri.queryParameters['alt'] != null
+                  ? uri.path.replaceFirst('/v0/b/', '').split('/o/').last
+                  : '';
+              if (objectPath.isNotEmpty) {
+                const bucket = 'tucpb---token.firebasestorage.app';
+                await http.delete(
+                  Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath'),
+                  headers: {'Authorization': 'Bearer $idToken'},
+                );
+              }
             } catch (e) {
               debugPrint('Aviso ao deletar imagem durante restauração: $e');
             }
