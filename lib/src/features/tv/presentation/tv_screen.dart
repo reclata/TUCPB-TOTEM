@@ -640,7 +640,7 @@ class _IdleCarouselState extends State<_IdleCarousel> {
         return Image.memory(
           bytes,
           key: ValueKey(imagePath.hashCode),
-          fit: BoxFit.contain,
+          fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
           errorBuilder: (context, error, stackTrace) {
@@ -658,7 +658,7 @@ class _IdleCarouselState extends State<_IdleCarousel> {
       return Image.network(
         imagePath,
         key: ValueKey(imagePath),
-        fit: BoxFit.contain,
+        fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
         errorBuilder: (context, error, stackTrace) {
@@ -677,7 +677,7 @@ class _IdleCarouselState extends State<_IdleCarousel> {
       return Image.asset(
         imagePath,
         key: ValueKey(imagePath),
-        fit: BoxFit.contain,
+        fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
         errorBuilder: (context, error, stackTrace) {
