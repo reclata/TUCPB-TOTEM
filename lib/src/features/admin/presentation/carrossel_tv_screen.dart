@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
+import 'package:terreiro_queue_system/src/shared/utils/image_picker_helper.dart';
 import '../data/admin_repository.dart';
 
 final adminTvPanelsProvider = StreamProvider.autoDispose<List<TvPanel>>((ref) {
@@ -43,28 +43,14 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
   Future<void> _uploadImage(TvPanel panel) async {
     try {
-      // PASSO 1: Selecionar arquivo
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-        withData: true,
-      );
+      // PASSO 1: Selecionar arquivo nativamente no navegador
+      final pickedImage = await pickImageFile();
+      if (pickedImage == null) return;
 
-      if (result == null || result.files.isEmpty) return;
+      final bytes = pickedImage.bytes;
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${pickedImage.name}';
+      final fileExtension = pickedImage.extension;
 
-      final file = result.files.first;
-      final bytes = file.bytes;
-      if (bytes == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Não foi possível ler o arquivo. Tente novamente."),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
 
       setState(() {
         _isUploading = true;
@@ -77,9 +63,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) throw Exception('Usuário não autenticado.');
         final idToken = await user.getIdToken();
-
-        final mimeType = 'image/${file.extension ?? 'jpeg'}';
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+        final mimeType = 'image/$fileExtension';
         final objectName = Uri.encodeComponent('carousel/$fileName');
         const bucket = 'tucpb---token.firebasestorage.app';
 
