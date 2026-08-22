@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -632,7 +633,28 @@ class _IdleCarouselState extends State<_IdleCarousel> {
   }
 
   Widget _buildImage(String imagePath) {
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    if (imagePath.startsWith('data:image/')) {
+      try {
+        final base64String = imagePath.split(',').last;
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          key: ValueKey(imagePath.hashCode),
+          fit: BoxFit.contain,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Icon(Icons.broken_image, color: Colors.white24, size: 64),
+            );
+          },
+        );
+      } catch (_) {
+        return const Center(
+          child: Icon(Icons.broken_image, color: Colors.white24, size: 64),
+        );
+      }
+    } else if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return Image.network(
         imagePath,
         key: ValueKey(imagePath),

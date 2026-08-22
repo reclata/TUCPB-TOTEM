@@ -1,16 +1,13 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:typed_data';
 
 class PickedImageData {
   final String name;
-  final String extension;
-  final Uint8List bytes;
+  final String dataUrl;
 
   PickedImageData({
     required this.name,
-    required this.extension,
-    required this.bytes,
+    required this.dataUrl,
   });
 }
 
@@ -33,35 +30,61 @@ Future<PickedImageData?> pickImageFile() async {
     final reader = html.FileReader();
 
     reader.onLoadEnd.listen((event) {
-      final result = reader.result;
-      Uint8List? bytes;
-      if (result is Uint8List) {
-        bytes = result;
-      } else if (result is ByteBuffer) {
-        bytes = result.asUint8List();
-      } else if (result is List<int>) {
-        bytes = Uint8List.fromList(result);
+      final rawDataUrl = reader.result as String?;
+      if (rawDataUrl == null) {
+        if (!completer.isCompleted) completer.complete(null);
+        return;
       }
 
-      if (bytes != null) {
-        final ext = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : 'jpeg';
+      // Redimensiona e comprime via HTML5 Canvas
+      final img = html.ImageElement();
+      img.src = rawDataUrl;
+      img.onLoad.listen((_) {
+        int width = img.width ?? 1280;
+        int height = img.height ?? 720;
+        const maxDim = 1280;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height * maxDim / width).round();
+            width = maxDim;
+          } else {
+            width = (width * maxDim / height).round();
+            height = maxDim;
+          }
+        }
+
+        final canvas = html.CanvasElement(width: width, height: height);
+        final ctx = canvas.context2D;
+        ctx.drawImageScaled(img, 0, 0, width, height);
+
+        // Exporta como JPEG otimizado
+        final compressedDataUrl = canvas.toDataUrl('image/jpeg', 0.82);
+
         if (!completer.isCompleted) {
           completer.complete(PickedImageData(
             name: file.name,
-            extension: ext,
-            bytes: bytes,
+            dataUrl: compressedDataUrl,
           ));
         }
-      } else {
-        if (!completer.isCompleted) completer.complete(null);
-      }
+      });
+
+      img.onError.listen((_) {
+        // Fallback: se falhar o resize, usa o data URL original
+        if (!completer.isCompleted) {
+          completer.complete(PickedImageData(
+            name: file.name,
+            dataUrl: rawDataUrl,
+          ));
+        }
+      });
     });
 
     reader.onError.listen((event) {
       if (!completer.isCompleted) completer.complete(null);
     });
 
-    reader.readAsArrayBuffer(file);
+    reader.readAsDataUrl(file);
   });
 
   return completer.future;

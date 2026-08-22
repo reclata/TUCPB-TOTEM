@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
 import 'package:terreiro_queue_system/src/shared/models/models.dart';
 import 'package:terreiro_queue_system/src/shared/utils/image_picker_helper.dart';
 import '../data/admin_repository.dart';
@@ -23,7 +21,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
   String? _selectedPanelId;
   final _urlController = TextEditingController();
   bool _isUploading = false;
-  double _uploadProgress = 0.0;
 
   final List<String> _defaultImages = [
     "assets/images/TUCPB 1.png",
@@ -43,84 +40,35 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
   Future<void> _uploadImage(TvPanel panel) async {
     try {
-      // PASSO 1: Selecionar arquivo nativamente no navegador
       final pickedImage = await pickImageFile();
       if (pickedImage == null) return;
 
-      final bytes = pickedImage.bytes;
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${pickedImage.name}';
-      final fileExtension = pickedImage.extension;
-
-
       setState(() {
         _isUploading = true;
-        _uploadProgress = 0.0;
       });
 
-      // PASSO 2: Upload via REST API (evita bug do firebase_storage_web)
-      String downloadUrl;
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) throw Exception('Usuário não autenticado.');
-        final idToken = await user.getIdToken();
-        final mimeType = 'image/$fileExtension';
-        final objectName = Uri.encodeComponent('carousel/$fileName');
-        const bucket = 'tucpb---token.firebasestorage.app';
+      final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
+      currentList.add(pickedImage.dataUrl);
 
-        final uploadUri = Uri.parse(
-          'https://firebasestorage.googleapis.com/v0/b/$bucket/o?uploadType=media&name=${Uri.encodeComponent('carousel/$fileName')}',
-        );
+      final updatedPanel = TvPanel(
+        id: panel.id,
+        terreiroId: panel.terreiroId,
+        nomePainel: panel.nomePainel,
+        status: panel.status,
+        modo: panel.modo,
+        entidadeId: panel.entidadeId,
+        giraId: panel.giraId,
+        ultimaAtualizacao: DateTime.now(),
+        senhaAtual: panel.senhaAtual,
+        carouselImages: currentList,
+      );
 
-        final response = await http.post(
-          uploadUri,
-          headers: {
-            'Authorization': 'Bearer $idToken',
-            'Content-Type': mimeType,
-          },
-          body: bytes,
-        );
-
-        if (response.statusCode != 200) {
-          throw Exception('HTTP ${response.statusCode}: ${response.body}');
-        }
-
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        final token = responseData['downloadTokens'] as String?;
-        if (token == null) throw Exception('Token de download não retornado.');
-
-        downloadUrl =
-            'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectName?alt=media&token=$token';
-      } catch (uploadErr) {
-        throw Exception('Falha no upload: $uploadErr');
-      }
-
-      // PASSO 3: Salvar URL no Firestore
-      try {
-        final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
-        currentList.add(downloadUrl);
-
-        final updatedPanel = TvPanel(
-          id: panel.id,
-          terreiroId: panel.terreiroId,
-          nomePainel: panel.nomePainel,
-          status: panel.status,
-          modo: panel.modo,
-          entidadeId: panel.entidadeId,
-          giraId: panel.giraId,
-          ultimaAtualizacao: DateTime.now(),
-          senhaAtual: panel.senhaAtual,
-          carouselImages: currentList,
-        );
-
-        await ref.read(adminRepositoryProvider).updateTvPanel(updatedPanel);
-      } catch (firestoreErr) {
-        throw Exception('Falha ao salvar no Firestore: $firestoreErr');
-      }
+      await ref.read(adminRepositoryProvider).updateTvPanel(updatedPanel);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Imagem enviada e adicionada com sucesso!"),
+            content: Text("Imagem adicionada com sucesso!"),
             backgroundColor: Colors.green,
           ),
         );
@@ -129,7 +77,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Erro ao enviar imagem: $e"),
+            content: Text("Erro ao adicionar imagem: $e"),
             backgroundColor: Colors.red,
           ),
         );
@@ -138,17 +86,14 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
       if (mounted) {
         setState(() {
           _isUploading = false;
-          _uploadProgress = 0.0;
         });
       }
     }
   }
 
-
   Future<void> _addUrlImage(TvPanel panel) async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
-
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -224,31 +169,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
     try {
       final currentList = List<String>.from(panel.carouselImages ?? _defaultImages);
-      final removedImage = currentList.removeAt(index);
-
-      // Se for uma imagem do storage, tentar deletá-la para economizar espaço
-      if (removedImage.contains('firebasestorage.googleapis.com')) {
-        try {
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            final idToken = await user.getIdToken();
-            // Extrai o path do objeto da URL de download
-            final uri = Uri.parse(removedImage);
-            final objectPath = uri.queryParameters['alt'] != null
-                ? uri.path.replaceFirst('/v0/b/', '').split('/o/').last
-                : '';
-            if (objectPath.isNotEmpty) {
-              const bucket = 'tucpb---token.firebasestorage.app';
-              await http.delete(
-                Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath'),
-                headers: {'Authorization': 'Bearer $idToken'},
-              );
-            }
-          }
-        } catch (e) {
-          debugPrint('Aviso ao deletar imagem do storage: $e');
-        }
-      }
+      currentList.removeAt(index);
 
       final updatedPanel = TvPanel(
         id: panel.id,
@@ -308,31 +229,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
     if (confirmed != true) return;
 
     try {
-      // Tentar limpar imagens personalizadas do storage
-      if (panel.carouselImages != null) {
-        final user = FirebaseAuth.instance.currentUser;
-        final idToken = user != null ? await user.getIdToken() : null;
-        for (var img in panel.carouselImages!) {
-          if (img.contains('firebasestorage.googleapis.com') && idToken != null) {
-            try {
-              final uri = Uri.parse(img);
-              final objectPath = uri.queryParameters['alt'] != null
-                  ? uri.path.replaceFirst('/v0/b/', '').split('/o/').last
-                  : '';
-              if (objectPath.isNotEmpty) {
-                const bucket = 'tucpb---token.firebasestorage.app';
-                await http.delete(
-                  Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o/$objectPath'),
-                  headers: {'Authorization': 'Bearer $idToken'},
-                );
-              }
-            } catch (e) {
-              debugPrint('Aviso ao deletar imagem durante restauração: $e');
-            }
-          }
-        }
-      }
-
       final updatedPanel = TvPanel(
         id: panel.id,
         terreiroId: panel.terreiroId,
@@ -368,6 +264,42 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
     }
   }
 
+  Widget _buildThumbnail(String path) {
+    if (path.startsWith('data:image/')) {
+      try {
+        final base64String = path.split(',').last;
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Center(
+            child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+          ),
+        );
+      } catch (_) {
+        return const Center(
+          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+        );
+      }
+    } else if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Center(
+          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+        ),
+      );
+    } else {
+      return Image.asset(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Center(
+          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tvPanelsAsync = ref.watch(adminTvPanelsProvider);
@@ -382,7 +314,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
             );
           }
 
-          // Seleciona o primeiro painel por padrão se nenhum estiver selecionado
           if (_selectedPanelId == null || !panels.any((p) => p.id == _selectedPanelId)) {
             _selectedPanelId = panels.first.id;
           }
@@ -415,7 +346,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                       ],
                     ),
                     const Spacer(),
-                    // Seletor de Painel
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
@@ -445,7 +375,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Seção de Ações / Adicionar
+                // Seção de Adicionar
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -477,20 +407,17 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          SizedBox(
+                                          const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: CircularProgressIndicator(
-                                              value: _uploadProgress > 0 ? _uploadProgress : null,
                                               strokeWidth: 2.5,
                                               color: Colors.brown,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
                                           Text(
-                                            _uploadProgress > 0
-                                                ? "Enviando: ${(_uploadProgress * 100).toInt()}%"
-                                                : "Preparando upload...",
+                                            "Adicionando imagem...",
                                             style: GoogleFonts.outfit(
                                                 color: Colors.brown[800], fontWeight: FontWeight.bold),
                                           ),
@@ -553,7 +480,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
 
                 const SizedBox(height: 32),
 
-                // Lista Grid de Imagens Atuais
+                // Grid de Imagens
                 Row(
                   children: [
                     Text(
@@ -591,7 +518,7 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                   itemCount: images.length,
                   itemBuilder: (context, index) {
                     final path = images[index];
-                    final isCustom = path.startsWith('http');
+                    final isCustom = path.startsWith('http') || path.startsWith('data:image/');
 
                     return Card(
                       clipBehavior: Clip.antiAlias,
@@ -602,25 +529,9 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                       elevation: 1,
                       child: Stack(
                         children: [
-                          // Imagem
                           Positioned.fill(
-                            child: path.startsWith('http')
-                                ? Image.network(
-                                    path,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Center(
-                                      child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                                    ),
-                                  )
-                                : Image.asset(
-                                    path,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Center(
-                                      child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                                    ),
-                                  ),
+                            child: _buildThumbnail(path),
                           ),
-                          // Overlay de informações e remoção
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
@@ -632,7 +543,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                               ),
                             ),
                           ),
-                          // Badge de Custom / Default
                           Positioned(
                             top: 12,
                             left: 12,
@@ -652,7 +562,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                               ),
                             ),
                           ),
-                          // Botão Excluir
                           Positioned(
                             top: 8,
                             right: 8,
@@ -669,7 +578,6 @@ class _CarrosselTvScreenState extends ConsumerState<CarrosselTvScreen> {
                               ),
                             ),
                           ),
-                          // Descrição da imagem / Posição
                           Positioned(
                             bottom: 12,
                             left: 12,
